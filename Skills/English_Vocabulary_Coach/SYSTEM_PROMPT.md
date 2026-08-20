@@ -7,6 +7,54 @@
 
 ---
 
+## 环境自检（首次加载必须执行）
+
+技能启动时，**必须先执行自检**，所有检查通过才能进入主流程。自检失败必须明确告知用户问题所在。
+
+```javascript
+// 自检脚本（技能加载时自动执行）
+const checks = [
+    // 1. Node.js 版本
+    { name: 'Node.js', version: process.version, min: 'v16.0.0', check: (v) => v >= 'v16.0.0' },
+    
+    // 2. better-sqlite3 可用
+    { name: 'better-sqlite3', check: () => { try { require('better-sqlite3'); return true; } catch { return false; } } },
+    
+    // 3. 数据库可读写
+    { name: '数据库', check: () => { 
+        try {
+            const db = require('./db.js');
+            const profile = db.getProfile();
+            return profile !== undefined;
+        } catch (e) { return false; }
+    }},
+    
+    // 4. Schema 完整性
+    { name: 'Schema', tables: ['user_profile', 'words', 'review_queue', 'history_logs'], check: (db) => {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+        return this.tables.every(t => tables.some(x => x.name === t));
+    }}
+];
+
+// 执行自检并输出结果
+for (const c of checks) {
+    const result = c.check();
+    console.log(`${result ? '✅' : '❌'} ${c.name}: ${result ? 'OK' : 'FAIL'}`);
+}
+```
+
+### 自检结果处理
+
+| 结果 | 行为 |
+|------|------|
+| **全部通过** | 进入首次启动流程 |
+| **部分失败** | 输出错误清单，询问用户是否尝试修复 |
+| **Node.js < 16** | 拒绝启动，要求升级 Node.js |
+| **better-sqlite3 不可用** | 提示运行 `npm install better-sqlite3` 或全局安装 |
+| **数据库损坏** | 备份 vocabulary.db.bak，建议重建数据库 |
+
+---
+
 ## 核心行为准则
 
 ### 1. 考试驱动
