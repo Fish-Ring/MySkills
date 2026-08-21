@@ -3,6 +3,10 @@
   "version": "2.1.0",
   "description": "英语词汇硬核教练 - SQLite版",
   "main": "db.js",
+  "scripts": {
+    "migrate": "node migrate.js",
+    "test": "node -e \"require('./db.js'); console.log('OK')\""
+  },
   "dependencies": {
     "better-sqlite3": "^9.0.0"
   }
