@@ -1,196 +1,98 @@
 ---
 name: learning-assistant
-description: 通用学习辅助系统，支持任意学科，基于SQLite记录错题、追踪薄弱点、提供复习提醒
+description: 通用学习辅助系统，支持任意学科，基于 SQLite 记录错题、追踪薄弱点、艾宾浩斯复习提醒
+version: 1.1.0
+entrypoint: SKILL.md
 ---
 
-# 技能名称：通用学习助手
-**版本**: 1.0.1
+# 通用学习助手（Learning Assistant）
 
-> **系统提示词**：详见 `./SYSTEM_PROMPT.md`，该文件定义了角色的核心行为准则、输出格式和约束条件，加载此技能时必须同时加载该文件。
+> **系统提示词**：`./SYSTEM_PROMPT.md` 是完全自包含的助手提示词，直接复制到 RikkaHub 助手的系统提示词中即可。本文件是技能目录内的说明与 API 参考。
 
----
+## 环境要求
 
-## 一、角色定义
-
-你是严谨、务实、以结果为导向的学习教练。说话直接，针对性强，不灌鸡汤，只给干货。
-
----
-
-## 二、环境要求
-
-| 工具 | 用途 |
+| 依赖 | 说明 |
 |------|------|
-| Node.js ≥ 16 | 驱动 db.js 数据库层 |
-| sqlite3 CLI | 数据库操作 |
+| Node.js ≥ 16 | 驱动 db.js |
+| sqlite3 CLI | `apt install sqlite3`（Debian/Ubuntu）；db.js 通过命令行操作数据库 |
 
-db.js 会自动初始化数据库，无需手动执行 schema.sql。
+- **零 npm 依赖**：无需 `npm install`。
+- 数据库文件：`./learner.db`（自动建库建表）。
+- 可选环境变量：`LEARNING_DB_PATH`（库路径）、`SQLITE3_BIN`（sqlite3 可执行文件路径）。
 
----
-
-## 三、首次使用流程
-
-### 3.1 检测状态
-读取 `./db.js` 获取数据库连接，检查 `getProfile()` 结果。
-
-- **用户档案不存在或未初始化**（exam 为空）→ 进入首次初始化
-- **已初始化** → 直接进入主流程
-
-### 3.2 首次初始化
-逐项询问：
+## 文件结构
 
 ```
-[初始化] 欢迎使用通用学习助手！
-
-1️⃣ 你正在学习什么学科？
-   例：数据结构、考研英语、CPA 会计...
-   
-2️⃣ 你的目标考试是什么？
-   例：考研408、CET6、高考...
-   
-3️⃣ 当前学习阶段？
-   选项：基础 / 强化 / 冲刺 / 自学
-   
-4️⃣ 目标日期？（可选）
-   例：2027-12-26
+Learning_Assistant/
+├── SKILL.md              # 本文件（技能入口 + API 参考）
+├── SYSTEM_PROMPT.md      # 自包含系统提示词（复制进助手）
+├── README.md             # 使用说明
+├── db.js                 # 数据库操作层（sqlite3 CLI 后端）
+├── package.json          # 元信息（无依赖）
+├── schemas/
+│   └── Schemas.md        # 数据库 schema
+└── modules/
+    ├── Vocab.md          # 知识点讲解模块
+    ├── Exercise.md       # 练习模块
+    └── Review.md         # 复习引擎模块
 ```
 
-收集答案后通过 `./db.js` 执行：
-```javascript
-const db = require('./db.js');
+## 快速自检
 
-// 初始化用户档案
-db.updateProfile({
-    exam: '目标考试',
-    stage: '学习阶段',
-    exam_date: 'YYYY-MM-DD'
-});
+```bash
+node -e "console.log(JSON.stringify(require('./db.js').getStats(), null, 2))"
 ```
 
-完成后提示：
-```
-✅ 初始化完成！
-数据库：./db.js (learner.db)
-当前学科：[学科列表]
-阶段：[阶段]
+输出包含 `backend: "sqlite3-cli"`、档案信息、到期复习数、今日统计即正常。
 
-你可以：
-• 提问知识点，我帮你解答并记录错题
-• 说"做题"开始练习
-• 说"总结"查看今日进度
-• 说"薄弱点"查看需要加强的内容
-```
+## 数据库 API 参考
 
----
+### 用户档案
 
-## 四、功能路由
-
-| 用户指令 | 执行模块 | 角色锚点 |
-|---------|---------|---------|
-| "帮我学XXX"、"XXX是什么" | Vocab.md | 严谨、以结果为导向 |
-| "做题"、"练习"、"出题" | Exercise.md | 冷酷阅卷官，不灌鸡汤 |
-| "总结"、"复习"、"薄弱点" | Review.md | 数据驱动，直击问题 |
-| "这道题我错了" | Exercise.md + 记录错题 | 冷静分析，精准纠正 |
-
----
-
-## 五、核心功能
-
-### 5.1 知识点查询
-- 检索 topics 表，匹配知识点
-- 输出结构化讲解 + 错题统计
-- 若不存在，询问是否记录
-
-### 5.2 练习与错题
-- 薄弱点加权抽题
-- 记录错题到 mistakes 表
-- 更新 progress 掌握度
-
-### 5.3 复习与总结
-- 到期复习任务提醒
-- 今日学习报告
-- 薄弱点追踪报告
-
----
-
-## 六、数据库操作示例
-
-### 查询知识点
-```javascript
-const db = require('./db.js');
-const results = db.getTopic(null, '关键词');  // LIKE 模糊搜索
-```
-
-### 记录错题
-```javascript
-const db = require('./db.js');
-db.addMistake(topicId, question, wrongAnswer, correctAnswer, explanation);
-```
-
-### 薄弱点统计
-```javascript
-const db = require('./db.js');
-const weakPoints = db.getWeakPoints(5);
-```
-
----
-
-## 七、输出格式
-
-### 知识点讲解
-```
-【知识点】[科目] - [知识点]
-【重要度】★×[N]
-【错题记录】[N] 道
-
-【核心内容】
-  • [内容1]
-  • [内容2]
-
-【常见考法】
-  • [考法1]
-  • [考法2]
-
-【掌握度】[X]% — [建议]
-```
-
-### 题目
-```
-【题目】第X题 [科目]-[知识点]
-[题目内容]
-
-A. [选项A]
-B. [选项B]
-C. [选项C]
-D. [选项D]
-
-请回复答案（如：A）
-```
-
-### 今日总结
-```
-📊 今日学习概况
-  练习：[N] 道 | 正确：[N] | 错误：[N] | 正确率：[X]%
-
-📚 分科统计
-  [科目1]：[N]题 [X]% ✓
-  [科目2]：[N]题 [X]% ⚠️
-
-⚠️ 今日薄弱点
-  1. [知识点] — 错误 N 次
-
-💡 建议
-  [针对性建议]
-```
-
----
-
-## 八、约束
-
-| 约束 | 规则 |
+| 函数 | 说明 |
 |------|------|
-| 环境依赖 | Node.js ≥ 16 + better-sqlite3（通过 db.js 管理） |
-| 数据文件 | ./learner.db（自动初始化） |
-| 科目/知识点 | 用户首次使用时定义，通过 db.addSubject / db.addTopic |
-| 错题记录 | 答错自动记录，支持手动添加 |
-| 薄弱点加权 | 错误多的知识点出题概率×2 |
-| 艾宾浩斯 | 答错重置 Stage 1，间隔重新计算 |
+| `getProfile()` | 获取用户档案 `{exam, stage, exam_date}` |
+| `updateProfile({exam, stage, exam_date})` | 更新档案（仅允许这三个字段） |
+| `setExam(exam)` / `setStage(stage)` / `setExamDate(date)` | 单字段便捷写入 |
+
+### 科目 / 知识点
+
+| 函数 | 说明 |
+|------|------|
+| `addSubject(name, fullName?, weight?)` | 添加科目，幂等；返回 `{id, created}` |
+| `getAllSubjects()` / `getSubject(id)` | 查询科目 |
+| `addTopic(subjectId, name, parentId?, examWeight?)` | 添加知识点；返回 `{id, created}` |
+| `getTopics(subjectId?, keyword?)` | 模糊搜索知识点列表 |
+| `getTopic(idOrKeyword, keywordHint?)` | 按 id 查询；传字符串或 `(null,'关键词')` 时模糊匹配返回最佳单个结果 |
+
+### 错题 / 掌握度
+
+| 函数 | 说明 |
+|------|------|
+| `addMistake(topicId, question, wrongAnswer, correctAnswer, explanation)` | 记错题（同题重复自动累计 mistake_count），同步累计 progress.wrong_count 并写日志 |
+| `updateProgress(topicId, isCorrect)` | 更新掌握度（首答保守起步，不会一答对就 100%），自动写练习日志 |
+| `getMistakesByTopic(topicId)` | 该知识点错题列表 |
+| `getWeakPoints(n)` | 错误最多的 n 个知识点（出题加权依据） |
+
+### 复习队列（艾宾浩斯）
+
+间隔 `[1, 2, 4, 8, 16]` 天。答对升档、答错回 Stage 1；Stage 5 再答对移出队列。
+
+| 函数 | 说明 |
+|------|------|
+| `addToReviewQueue(topicId, stage=1)` | 加入/重置队列（复用已有行，不累积） |
+| `getReviewQueue()` | 全部待复习 |
+| `getDueReviews(currentTime?)` | 到期任务（启动时必须检查并提醒） |
+| `updateReviewStage(topicId, correct)` | 更新阶段；返回 `{topic_id, stage, next_review_at}` 或 `null` |
+| `removeFromReviewQueue(topicId)` | 移除 |
+
+### 日志与统计
+
+`history_logs` 按 `(date, type)` 去重累加，type ∈ `vocab_search / exercise / mistake / review`。
+
+| 函数 | 说明 |
+|------|------|
+| `addLog(type, count=1, date?=今天)` | 手动记日志（查词记 vocab_search；练习/错题/复习接口已自动记录） |
+| `getLogsByDate(date)` / `getLogs()` | 查询日志 |
+| `getTodayStats()` | `{date, vocab_search, exercise, mistake, review, accuracy}` |
+| `getStats()` | 总览（含 backend、due_reviews、today） |

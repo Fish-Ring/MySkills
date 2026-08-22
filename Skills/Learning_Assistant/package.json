@@ -1,9 +1,9 @@
 {
   "name": "learning-assistant",
-  "version": "1.0.1",
-  "description": "通用学习助手 - SQLite错题追踪与艾宾浩斯复习引擎",
+  "version": "1.1.0",
+  "description": "通用学习助手 - sqlite3 CLI 错题追踪与艾宾浩斯复习引擎（零 npm 依赖）",
   "main": "db.js",
-  "dependencies": {
-    "better-sqlite3": "^9.0.0"
+  "scripts": {
+    "test": "node -e \"console.log(JSON.stringify(require('./db.js').getStats(), null, 2))\""
   }
 }

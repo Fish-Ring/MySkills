@@ -1,58 +1,55 @@
-# Learning Assistant (通用学习助手) v1.0.1
+# Learning Assistant (通用学习助手) v1.1.0
+
+任意学科的错题追踪 + 薄弱点分析 + 艾宾浩斯复习引擎。**零 npm 依赖**，只需 Node.js ≥ 16 和 sqlite3 命令行工具。
 
 ## 快速开始
 
 ```bash
+# Debian/Ubuntu rootfs（RikkaHub 工作区等）
+apt install -y sqlite3
+
 cd Skills/Learning_Assistant
-npm install
+node -e "console.log(JSON.stringify(require('./db.js').getStats(), null, 2))"
 ```
+
+## 搭配 RikkaHub 使用
+
+1. 在 APP 中创建工作区（rootfs），把 `Learning_Assistant/` 整个目录放入工作区
+2. 在工作区内执行 `apt install -y sqlite3`
+3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中
+4. 首次对话会自动引导初始化档案（学科 / 目标考试 / 阶段 / 目标日期）
 
 ## 文件结构
 
 ```
 Learning_Assistant/
-├── SKILL.md              # 技能入口（AI路由）
-├── SYSTEM_PROMPT.md      # 全局提示词
+├── SKILL.md              # 技能入口 + API 参考
+├── SYSTEM_PROMPT.md      # 自包含系统提示词（复制进助手）
 ├── README.md             # 本文件
-├── db.js                 # 数据库操作层
-├── package.json          # 依赖声明
-├── schemas/
-│   └── Schemas.md        # 数据库schema
-└── modules/
-    ├── Vocab.md          # 知识点模块
-    ├── Exercise.md       # 练习模块
-    └── Review.md         # 复习引擎
+├── db.js                 # 数据库操作层（sqlite3 CLI 后端）
+├── package.json          # 元信息（无依赖）
+├── schemas/Schemas.md    # 数据库 schema
+└── modules/              # Vocab / Exercise / Review 功能模块
 ```
-
-## 使用
-
-### 命令行
-```javascript
-const db = require('./db.js');
-
-// 初始化用户档案
-db.updateProfile({
-    exam: '考研22408',
-    stage: '基础',
-    exam_date: '2026-12-26'
-});
-
-// 统计
-console.log(db.getStats());
-```
-
-### AI集成
-将 `Skills/Learning_Assistant/` 放入 Hermes Agent 技能目录，AI自动读取 `SKILL.md`。
 
 ## API
 
+完整签名见 `SKILL.md`。常用：
+
 | 函数 | 说明 |
 |------|------|
-| `getProfile()` | 获取用户配置 |
-| `updateProfile(data)` | 更新用户配置 |
-| `addSubject(name)` | 添加科目 |
-| `addTopic(data)` | 添加知识点 |
-| `getWeakPoints(n)` | 获取薄弱知识点 |
-| `addMistake(data)` | 记录错题 |
-| `updateProgress(topicId, correct)` | 更新掌握度 |
-| `getDueReviews()` | 获取到期复习 |
+| `getProfile()` / `updateProfile({exam,stage,exam_date})` | 用户档案 |
+| `addSubject(name)` / `addTopic(subjectId, name)` | 科目与知识点 |
+| `getTopic(null, '关键词')` | 模糊匹配最佳知识点 |
+| `addMistake(topicId, question, wrongAnswer, correctAnswer, explanation)` | 记错题（自动累计掌握度统计） |
+| `updateProgress(topicId, isCorrect)` | 更新掌握度 |
+| `getWeakPoints(n)` | 薄弱点 Top N |
+| `addToReviewQueue(topicId, stage)` / `getDueReviews()` / `updateReviewStage(topicId, correct)` | 艾宾浩斯队列 |
+| `getTodayStats()` / `getStats()` | 今日与总览统计 |
+
+## 环境变量
+
+| 变量 | 默认 | 说明 |
+|------|------|------|
+| `LEARNING_DB_PATH` | `./learner.db` | 数据库文件路径 |
+| `SQLITE3_BIN` | `sqlite3` | sqlite3 可执行文件路径 |

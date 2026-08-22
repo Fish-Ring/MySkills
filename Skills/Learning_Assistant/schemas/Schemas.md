@@ -55,6 +55,14 @@ CREATE TABLE IF NOT EXISTS review_queue (
     FOREIGN KEY (topic_id) REFERENCES topics(id)
 );
 
+CREATE TABLE IF NOT EXISTS history_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,                    -- 日期 (YYYY-MM-DD)
+    type TEXT NOT NULL,                    -- 类型 (vocab_search/exercise/mistake/review)
+    count INTEGER DEFAULT 0,
+    UNIQUE(date, type)
+);
+
 CREATE TABLE IF NOT EXISTS user_profile (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     exam TEXT DEFAULT '',
@@ -64,6 +72,9 @@ CREATE TABLE IF NOT EXISTS user_profile (
 );
 ```
 
+**日志写入规则**：`addMistake` / `updateProgress` / `updateReviewStage` 在 db.js 内部自动累加对应日志；查词类动作由模块手动调用 `addLog('vocab_search', n)`。
+```
+
 ## 索引
 
 ```sql
@@ -71,4 +82,5 @@ CREATE INDEX IF NOT EXISTS idx_mistakes_topic ON mistakes(topic_id);
 CREATE INDEX IF NOT EXISTS idx_mistakes_count ON mistakes(mistake_count DESC);
 CREATE INDEX IF NOT EXISTS idx_progress_mastery ON progress(mastery_level ASC);
 CREATE INDEX IF NOT EXISTS idx_review_queue ON review_queue(next_review_at ASC, is_reviewed ASC);
+CREATE INDEX IF NOT EXISTS idx_history_date ON history_logs(date);
 ```

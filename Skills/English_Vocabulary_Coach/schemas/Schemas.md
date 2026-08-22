@@ -73,7 +73,7 @@ CREATE INDEX IF NOT EXISTS idx_words_word ON words(word);
 CREATE INDEX IF NOT EXISTS idx_words_tag ON words(tag);
 CREATE INDEX IF NOT EXISTS idx_review_queue_time ON review_queue(next_review_time);
 CREATE INDEX IF NOT EXISTS idx_review_queue_word ON review_queue(word);
-CREATE INDEX IF NOT EXISTS idx_review_queue_due ON review_queue(next_review_time ASC);
+CREATE INDEX IF NOT EXISTS idx_review_queue_due ON review_queue(next_review_time ASC, is_reviewed ASC);
 CREATE INDEX IF NOT EXISTS idx_history_date ON history_logs(date);
 ```
 
