@@ -1,7 +1,7 @@
 ---
 name: learning-assistant
-description: 通用学习辅助系统，支持任意学科，基于 SQLite 记录错题、追踪薄弱点、艾宾浩斯复习提醒
-version: 1.1.0
+description: 通用学习教练技能：支持任意学科的知识点讲解、出题练习、错题记录与艾宾浩斯复习，通过 SQLite 持久追踪薄弱点，随用户提问自动采集知识漏洞。当用户想学习或查询知识点、做题练习、记录错题、分析薄弱点或安排复习总结时使用。
+version: 1.2.0
 entrypoint: SKILL.md
 ---
 
@@ -23,10 +23,11 @@ entrypoint: SKILL.md
 ## 文件结构
 
 ```
-Learning_Assistant/
+learning-assistant/
 ├── SKILL.md              # 本文件（技能入口 + API 参考）
 ├── SYSTEM_PROMPT.md      # 自包含系统提示词（复制进助手）
 ├── README.md             # 使用说明
+├── selfcheck.js          # 环境自检脚本（node selfcheck.js）
 ├── db.js                 # 数据库操作层（sqlite3 CLI 后端）
 ├── package.json          # 元信息（无依赖）
 ├── schemas/
@@ -40,10 +41,22 @@ Learning_Assistant/
 ## 快速自检
 
 ```bash
-node -e "console.log(JSON.stringify(require('./db.js').getStats(), null, 2))"
+node ./selfcheck.js
 ```
 
-输出包含 `backend: "sqlite3-cli"`、档案信息、到期复习数、今日统计即正常。
+输出 Node 版本、`skill_dir`、档案、到期复习数与今日统计即正常；加载失败时自带中文排查提示。
+
+## 部署到 RikkaHub 工作区
+
+推荐布局——技能目录直接位于工作区根下：
+
+```
+/workspace/
+└── learning-assistant/     # 本目录内容原样放入
+```
+
+- 工作区内执行 `apt install -y sqlite3`，然后 `node /workspace/learning-assistant/selfcheck.js` 验证
+- 若克隆整仓（技能实际位于 `/workspace/MySkills/Skills/learning-assistant`），无需改任何文件：SYSTEM_PROMPT 内置 find 定位回退，助手首次调用报错时会自动定位真实目录并固定
 
 ## 数据库 API 参考
 

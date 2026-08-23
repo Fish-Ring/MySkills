@@ -6,8 +6,8 @@
 
 | 技能 | 描述 | 用途 |
 |------|------|------|
-| **English_Vocabulary_Coach** | 英语词汇硬核教练 | CET4/6、考研、雅思、托福词汇记忆与实战训练 |
-| **Learning_Assistant** | 通用学习助手 | 任意学科错题追踪、薄弱点分析、艾宾浩斯复习引擎 |
+| **learning-assistant** | 通用学习教练：知识点讲解、出题练习、错题记录、艾宾浩斯复习，随提问自动采集薄弱点 | 任意学科错题追踪、薄弱点分析、复习引擎 |
+| **english-vocabulary-coach** | 英语备考词汇教练：查词辨析、按考试难度抽测、艾宾浩斯复习与统计 | CET4/6、考研、专升本、雅思、托福备考 |
 
 ## 运行环境
 
@@ -19,20 +19,26 @@
 
 ### 搭配 RikkaHub
 
-1. 在 APP 中创建工作区（rootfs），把技能目录整个放入工作区
+1. 在 APP 中创建工作区（rootfs），把技能目录放入工作区根下：
+
+   ```
+   /workspace/
+   ├── learning-assistant/          # Skills/learning-assistant 的内容
+   └── english-vocabulary-coach/    # Skills/english-vocabulary-coach 的内容（共用工作区时）
+   ```
+
 2. 在工作区内执行 `apt install -y sqlite3`
-3. 新建助手，把对应技能的 `SYSTEM_PROMPT.md` 全文粘贴到助手系统提示词中
+3. 新建助手，把对应技能的 `SYSTEM_PROMPT.md` 全文粘贴到助手系统提示词中——提示词已内置技能目录定位与 find 回退
 4. 首次对话自动引导初始化
 
 ### 命令行自检
 
 ```bash
-cd Skills/Learning_Assistant
-node -e "console.log(JSON.stringify(require('./db.js').getStats(), null, 2))"
-
-cd ../English_Vocabulary_Coach
-node -e "console.log(JSON.stringify(require('./db.js').getStats(), null, 2))"
+node /workspace/learning-assistant/selfcheck.js
+node /workspace/english-vocabulary-coach/selfcheck.js
 ```
+
+输出 Node 版本、档案与统计概要即正常。
 
 ## 文件结构
 
@@ -42,19 +48,21 @@ MySkills/
 ├── LICENSE
 ├── .gitignore
 └── Skills/
-    ├── English_Vocabulary_Coach/
+    ├── english-vocabulary-coach/
     │   ├── SKILL.md           # 技能入口（API 参考）
     │   ├── SYSTEM_PROMPT.md   # 自包含系统提示词（复制进助手）
     │   ├── README.md
+    │   ├── selfcheck.js       # 环境自检脚本
     │   ├── db.js              # 数据库操作层（sqlite3 CLI 后端）
     │   ├── migrate.js         # v1 JSON 数据迁移（可选）
     │   ├── package.json
     │   ├── schemas/Schemas.md
     │   └── modules/           # Vocab / Exercise / Review
-    └── Learning_Assistant/
+    └── learning-assistant/
         ├── SKILL.md
         ├── SYSTEM_PROMPT.md
         ├── README.md
+        ├── selfcheck.js       # 环境自检脚本
         ├── db.js
         ├── package.json
         ├── schemas/Schemas.md

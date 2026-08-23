@@ -1,7 +1,7 @@
 ---
-name: English_Vocabulary_Coach
-description: 本地优先、多考试自适应的英语词汇与听说读写硬核教练（sqlite3 CLI 版）
-version: 2.2.0
+name: english-vocabulary-coach
+description: 英语备考词汇教练技能：面向 CET4/CET6/考研/专升本/雅思/托福等考试，提供查词辨析、按考试难度抽测、艾宾浩斯复习与学习统计。当用户查单词、背单词、做英语题、备考英语考试或复习词汇时使用。
+version: 2.3.0
 entrypoint: SKILL.md
 ---
 
@@ -23,10 +23,11 @@ entrypoint: SKILL.md
 ## 文件结构
 
 ```
-English_Vocabulary_Coach/
+english-vocabulary-coach/
 ├── SKILL.md              # 本文件（技能入口 + API 参考）
 ├── SYSTEM_PROMPT.md      # 自包含系统提示词（复制进助手）
 ├── README.md             # 使用说明
+├── selfcheck.js          # 环境自检脚本（node selfcheck.js）
 ├── db.js                 # 数据库操作层（sqlite3 CLI 后端）
 ├── migrate.js            # v1 JSON 数据迁移脚本（可选）
 ├── package.json          # 元信息（无依赖）
@@ -41,10 +42,22 @@ English_Vocabulary_Coach/
 ## 快速自检
 
 ```bash
-node -e "console.log(JSON.stringify(require('./db.js').getStats(), null, 2))"
+node ./selfcheck.js
 ```
 
-输出包含 `backend: "sqlite3-cli"`、`target_exam`、到期复习数即正常。
+输出 Node 版本、`skill_dir`、档案、到期复习数与今日统计即正常；加载失败时自带中文排查提示。
+
+## 部署到 RikkaHub 工作区
+
+推荐布局——技能目录直接位于工作区根下：
+
+```
+/workspace/
+└── english-vocabulary-coach/   # 本目录内容原样放入
+```
+
+- 工作区内执行 `apt install -y sqlite3`，然后 `node /workspace/english-vocabulary-coach/selfcheck.js` 验证
+- 若克隆整仓（技能实际位于 `/workspace/MySkills/Skills/english-vocabulary-coach`），无需改任何文件：SYSTEM_PROMPT 内置 find 定位回退，助手首次调用报错时会自动定位真实目录并固定
 
 ## 数据库 API 参考
 

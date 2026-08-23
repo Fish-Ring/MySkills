@@ -1,0 +1,10 @@
+{
+  "name": "english-vocabulary-coach",
+  "version": "2.3.0",
+  "description": "英语备考词汇教练 - 查词/抽测/艾宾浩斯复习，多考试自适应（零 npm 依赖）",
+  "main": "db.js",
+  "scripts": {
+    "migrate": "node migrate.js",
+    "test": "node selfcheck.js"
+  }
+}

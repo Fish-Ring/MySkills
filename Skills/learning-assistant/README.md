@@ -1,4 +1,4 @@
-# Learning Assistant (通用学习助手) v1.1.0
+# Learning Assistant (通用学习助手) v1.2.0
 
 任意学科的错题追踪 + 薄弱点分析 + 艾宾浩斯复习引擎。**零 npm 依赖**，只需 Node.js ≥ 16 和 sqlite3 命令行工具。
 
@@ -8,24 +8,25 @@
 # Debian/Ubuntu rootfs（RikkaHub 工作区等）
 apt install -y sqlite3
 
-cd Skills/Learning_Assistant
-node -e "console.log(JSON.stringify(require('./db.js').getStats(), null, 2))"
+node /workspace/learning-assistant/selfcheck.js
+# 本地开发：cd Skills/learning-assistant && node selfcheck.js
 ```
 
 ## 搭配 RikkaHub 使用
 
-1. 在 APP 中创建工作区（rootfs），把 `Learning_Assistant/` 整个目录放入工作区
-2. 在工作区内执行 `apt install -y sqlite3`
-3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中
+1. 在 APP 中创建工作区（rootfs），把本目录内容放入工作区，推荐路径 `/workspace/learning-assistant/`
+2. 在工作区内执行 `apt install -y sqlite3`，运行 `node /workspace/learning-assistant/selfcheck.js` 验证
+3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中（已内置技能目录定位与 find 回退，整仓克隆等其他布局也能自动适配）
 4. 首次对话会自动引导初始化档案（学科 / 目标考试 / 阶段 / 目标日期）
 
 ## 文件结构
 
 ```
-Learning_Assistant/
+learning-assistant/
 ├── SKILL.md              # 技能入口 + API 参考
 ├── SYSTEM_PROMPT.md      # 自包含系统提示词（复制进助手）
 ├── README.md             # 本文件
+├── selfcheck.js          # 环境自检脚本
 ├── db.js                 # 数据库操作层（sqlite3 CLI 后端）
 ├── package.json          # 元信息（无依赖）
 ├── schemas/Schemas.md    # 数据库 schema

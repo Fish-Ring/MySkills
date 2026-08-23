@@ -1,4 +1,4 @@
-# English Vocabulary Coach (英语词汇教练) v2.2.0
+# English Vocabulary Coach (英语词汇教练) v2.3.0
 
 本地优先、多考试自适应的英语词汇教练。**零 npm 依赖**，只需 Node.js ≥ 16 和 sqlite3 命令行工具。
 
@@ -8,24 +8,25 @@
 # Debian/Ubuntu rootfs（RikkaHub 工作区等）
 apt install -y sqlite3
 
-cd Skills/English_Vocabulary_Coach
-node -e "console.log(JSON.stringify(require('./db.js').getStats(), null, 2))"
+node /workspace/english-vocabulary-coach/selfcheck.js
+# 本地开发：cd Skills/english-vocabulary-coach && node selfcheck.js
 ```
 
 ## 搭配 RikkaHub 使用
 
-1. 在 APP 中创建工作区（rootfs），把 `English_Vocabulary_Coach/` 整个目录放入工作区
-2. 在工作区内执行 `apt install -y sqlite3`
-3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中
+1. 在 APP 中创建工作区（rootfs），把本目录内容放入工作区，推荐路径 `/workspace/english-vocabulary-coach/`
+2. 在工作区内执行 `apt install -y sqlite3`，运行 `node /workspace/english-vocabulary-coach/selfcheck.js` 验证
+3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中（已内置技能目录定位与 find 回退，整仓克隆等其他布局也能自动适配）
 4. 首次对话会要求设置目标考试（CET4 / CET6 / 考研英语 / 雅思 / 托福等）
 
 ## 文件结构
 
 ```
-English_Vocabulary_Coach/
+english-vocabulary-coach/
 ├── SKILL.md              # 技能入口 + API 参考
 ├── SYSTEM_PROMPT.md      # 自包含系统提示词（复制进助手）
 ├── README.md             # 本文件
+├── selfcheck.js          # 环境自检脚本
 ├── db.js                 # 数据库操作层（sqlite3 CLI 后端）
 ├── migrate.js            # v1 JSON 数据迁移脚本（可选）
 ├── package.json          # 元信息（无依赖）
