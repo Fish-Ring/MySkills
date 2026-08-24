@@ -1,7 +1,9 @@
--- 通用学习助手 v1.3.0 - 常用 SQL 模板
+-- 通用学习助手 v1.3.1 - 常用 SQL 模板
 -- 用法：sqlite3 -json <技能目录>/learner.db "<语句>"
 -- 约定：KW = 关键词；NOW = strftime('%s','now')；间隔秒数 [86400,172800,345600,691200,1382400]
--- 铁律：任何 INSERT 前必须先跑对应查重语句
+--       mastery_level = -1（COALESCE 兜底）表示从未练习
+-- 铁律：任何 INSERT 前必须先跑对应查重语句；
+--       文本值中的单引号必须写成两个 '' 再拼入 SQL（It's → 'It''s'）
 
 -- ============ 查重三件套（INSERT 前必跑） ============
 -- ① 科目查重
@@ -28,16 +30,27 @@ ON CONFLICT(question) DO UPDATE SET
     times_asked = times_asked + 1,
     last_asked_at = CURRENT_TIMESTAMP,
     answer_digest = excluded.answer_digest;
--- 补充知识点关键词（合并去重交给模型判断后手动 UPDATE）
-UPDATE topics SET keywords = '新别名,' || keywords WHERE id = 知识点ID AND keywords NOT LIKE '%新别名%';
--- 记错题（UNIQUE 含可空列，答案为空时可能重复插入——插入前先用①③式查询确认）
+-- 补充知识点关键词（幂等：已含则不动；兼容空串不产生尾逗号）
+UPDATE topics SET keywords = CASE WHEN keywords = '' OR keywords IS NULL THEN '新别名' ELSE '新别名,' || keywords END
+WHERE id = 知识点ID AND (',' || COALESCE(keywords,'') || ',') NOT LIKE '%,新别名,%';
+-- 错题查重（UNIQUE 含可空列，NULL 互不相等，必须先查后插）
+SELECT id, mistake_count FROM mistakes
+WHERE topic_id = 知识点ID AND question = '题目'
+  AND COALESCE(wrong_answer,'') = COALESCE('错误答案','')
+  AND COALESCE(correct_answer,'') = COALESCE('正确答案','');
+-- 记错题（查重无命中再插入）
 INSERT OR IGNORE INTO mistakes (topic_id, question, wrong_answer, correct_answer, explanation)
 VALUES (知识点ID, '题目', '错误答案', '正确答案', '解析');
--- 掌握度 upsert（做错时 wrong_count+1；首次自动建行）
+-- 掌握度 upsert·做错（wrong_count+1；首次自动建行）
 INSERT INTO progress (topic_id, correct_count, wrong_count, last_practice_at)
 VALUES (知识点ID, 0, 1, CURRENT_TIMESTAMP)
 ON CONFLICT(topic_id) DO UPDATE SET
     wrong_count = wrong_count + 1, last_practice_at = CURRENT_TIMESTAMP;
+-- 掌握度 upsert·自评已懂（correct_count+1）
+INSERT INTO progress (topic_id, correct_count, wrong_count, last_practice_at)
+VALUES (知识点ID, 1, 0, CURRENT_TIMESTAMP)
+ON CONFLICT(topic_id) DO UPDATE SET
+    correct_count = correct_count + 1, last_practice_at = CURRENT_TIMESTAMP;
 
 -- ============ 检索（回答前必跑） ============
 -- 相似历史问题（含次数，命中说明问过）
@@ -82,6 +95,9 @@ UPDATE review_queue SET
              ELSE 86400 END
     END
 WHERE id = 队列行ID;
+
+-- 可选清理：完成超过 90 天的旧队列行删除，防表膨胀（按需执行）
+-- DELETE FROM review_queue WHERE is_reviewed = 1 AND next_review_at < strftime('%s','now') - 7776000;
 
 -- ============ 日志与统计 ============
 -- 记一笔（当日同类型自动累计）

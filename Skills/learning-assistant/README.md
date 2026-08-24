@@ -1,4 +1,4 @@
-# Learning Assistant (通用学习助手) v1.3.0
+# Learning Assistant (通用学习助手) v1.3.1
 
 任意学科的错题追踪 + 薄弱点分析 + 艾宾浩斯复习引擎。**零 Node/npm 依赖**，只需 sqlite3 命令行工具。
 

@@ -1,7 +1,7 @@
 ---
 name: english-vocabulary-coach
 description: 英语备考词汇教练技能：面向 CET4/CET6/考研/专升本/雅思/托福等考试，提供查词辨析、按考试难度抽测、艾宾浩斯复习与学习统计。当用户查单词、背单词、做英语题、备考英语考试或复习词汇时使用。
-version: 2.4.0
+version: 2.4.1
 entrypoint: SKILL.md
 ---
 
@@ -81,7 +81,7 @@ sqlite3 <技能目录>/vocabulary.db < <技能目录>/schemas/schema.sql
 
 ### 铁律
 
-1. 任何 INSERT 前先 SELECT 查重（单词按 `words.word`）；命中即复用。
+1. 任何 INSERT 前先 SELECT 查重（单词按 `words.word`）；命中即复用。例句/释义中的单引号写成 `''` 再拼 SQL。
 2. 数据库报错时原样告知用户并重试一次，再失败给修复命令。
 
 ### 核心表速览

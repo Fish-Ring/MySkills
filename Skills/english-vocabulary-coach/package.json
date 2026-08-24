@@ -1,5 +1,5 @@
 {
   "name": "english-vocabulary-coach",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "英语备考词汇教练 - sqlite3 CLI 直连，查词/抽测/艾宾浩斯复习（零依赖）"
 }

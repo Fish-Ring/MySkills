@@ -11,7 +11,7 @@ sqlite3 -json <技能目录>/learner.db "SELECT type,SUM(count) AS n FROM histor
 sqlite3 -json <技能目录>/learner.db "SELECT t.name,s.name AS subject,p.wrong_count,p.correct_count,ROUND(p.mastery_level,2) AS mastery FROM progress p JOIN topics t ON t.id=p.topic_id JOIN subjects s ON s.id=t.subject_id WHERE p.wrong_count>p.correct_count OR p.mastery_level<0.6 ORDER BY p.mastery_level ASC LIMIT 5;"
 ```
 
-正确率 = 1 − mistake/exercise（qa 类型不计入）。输出练习量、分科统计、薄弱点 Top3 与明确行动建议。
+正确率 = 1 − mistake/exercise（qa 类型不计入）；练习量为 0 时显示「—」不显示百分比。输出练习量、分科统计、薄弱点 Top3 与明确行动建议。
 
 ## 到期抽测
 

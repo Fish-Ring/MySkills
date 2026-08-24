@@ -15,6 +15,7 @@
    # c. 关联薄弱点
    sqlite3 -json <技能目录>/learner.db "SELECT t.name,p.wrong_count,p.correct_count FROM progress p JOIN topics t ON t.id=p.topic_id WHERE (p.wrong_count>p.correct_count OR p.mastery_level<0.6) AND (t.name LIKE '%关键词%' OR t.keywords LIKE '%关键词%');"
    ```
+   > mastery 显示 -1 表示该知识点从未练习（输出时写「未练习」而非 -1%）。
 3. 结构化讲解；命中历史时告知"问过 N 次 / 这是薄弱点"
 4. **入库**（在输出回答前完成，先查重后写入）：
    - 科目缺 → `INSERT OR IGNORE INTO subjects (name, full_name) VALUES (...)`

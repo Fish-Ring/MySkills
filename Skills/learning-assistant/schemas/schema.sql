@@ -1,4 +1,4 @@
--- 通用学习助手 v1.3.0 - 数据库模式（全幂等，可重复执行）
+-- 通用学习助手 v1.3.1 - 数据库模式（全幂等，可重复执行）
 -- 初始化：sqlite3 /workspace/learning-assistant/learner.db < schemas/schema.sql
 
 CREATE TABLE IF NOT EXISTS subjects (

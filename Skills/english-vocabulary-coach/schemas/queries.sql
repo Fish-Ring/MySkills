@@ -1,6 +1,7 @@
--- 英语词汇教练 v2.4.0 - 常用 SQL 模板
+-- 英语词汇教练 v2.4.1 - 常用 SQL 模板
 -- 用法：sqlite3 -json <技能目录>/vocabulary.db "<语句>"
--- 铁律：任何 INSERT 前必须先跑对应查重语句
+-- 铁律：任何 INSERT 前必须先跑对应查重语句；
+--       文本值中的单引号必须写成两个 '' 再拼入 SQL（It's → 'It''s'，英语例句撇号高频）
 
 -- ============ 查重（INSERT 前必跑） ============
 SELECT id, word, pos, meaning FROM words WHERE word = '单词';

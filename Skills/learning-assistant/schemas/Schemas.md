@@ -4,7 +4,7 @@
 
 ## 设计原则
 
-1. **幂等**：全部 `IF NOT EXISTS`，重复执行无副作用；旧库缺列时用 `ALTER TABLE ... ADD COLUMN keywords` 升级（见 schema.sql 末段）。
+1. **幂等**：全部 `IF NOT EXISTS`，重复执行无副作用；旧库缺列时按 `queries.sql` 末尾「旧库升级」段 `ALTER TABLE ... ADD COLUMN keywords` 升级。
 2. **查重靠约束**：`subjects.name`、`questions.question`、`(date,type)` 等均有 UNIQUE 约束，写入一律 `INSERT OR IGNORE` 或 upsert。
 3. **日志自动累计**：同一 `(date, type)` 重复写入时 count+1（ON CONFLICT upsert）。
 
@@ -54,4 +54,4 @@ ORDER BY p.mastery_level ASC, p.wrong_count DESC
 
 ## 索引
 
-idx_topics_subject、idx_topics_keywords、idx_questions_topic、idx_questions_last_asked、idx_mistakes_topic、idx_mistakes_count、idx_progress_mastery、idx_review_queue_due(next_review_at, is_reviewed)、idx_history_date——完整定义见 schema.sql。
+idx_topics_subject、idx_questions_topic、idx_questions_last(last_asked_at)、idx_mistakes_topic、idx_mistakes_count(mistake_count)、idx_progress_mastery(mastery_level)、idx_review_queue_due(next_review_at, is_reviewed)、idx_history_date——完整定义见 schema.sql。

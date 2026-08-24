@@ -12,7 +12,7 @@
 ## 运行环境
 
 - sqlite3 命令行工具：`apt install -y sqlite3` —— **唯一依赖**
-- 零 Node/npm 依赖：所有数据操作直接用 sqlite3 CLI 完成，无需编译任何原生模块（安卓 rootfs/proot 友好，Node 18 也能跑）
+- 零 Node/npm 依赖，无需编译任何原生模块（安卓 rootfs/proot 环境友好）
 
 ## 快速开始
 

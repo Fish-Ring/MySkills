@@ -1,4 +1,4 @@
-# English Vocabulary Coach (英语词汇教练) v2.4.0
+# English Vocabulary Coach (英语词汇教练) v2.4.1
 
 本地优先、多考试自适应的英语词汇教练。**零 Node/npm 依赖**，只需 sqlite3 命令行工具。
 

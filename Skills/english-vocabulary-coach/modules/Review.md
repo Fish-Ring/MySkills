@@ -7,8 +7,8 @@
 ```bash
 # 今日日志
 sqlite3 -json <技能目录>/vocabulary.db "SELECT type,SUM(count) AS n FROM history_logs WHERE date=date('now','localtime') GROUP BY type;"
-# 今日新词（按词性分类罗列）
-sqlite3 -json <技能目录>/vocabulary.db "SELECT word,pos,tag FROM words WHERE substr(created_at,1,10)=date('now','localtime') ORDER BY pos;"
+# 今日新词（按词性分类罗列；created_at 是 UNIX 秒，必须用 unixepoch 换算）
+sqlite3 -json <技能目录>/vocabulary.db "SELECT word,pos,tag FROM words WHERE date(created_at,'unixepoch','localtime')=date('now','localtime') ORDER BY pos;"
 ```
 
 按 `[名词/动词/形容词/副词]` 分类编排；**遗忘风险预测**：标出对 target_exam 设伏最深、明天最容易忘的 3 个词（优先取 Stage 低、frequency 高的）。
