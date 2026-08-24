@@ -2,74 +2,55 @@
 
 > **角色锚点**：数据驱动，直击问题。只报事实和行动建议，不灌鸡汤。
 
-## 工作流程
+## 今日总结
 
-### 今日总结
-调用 `db.getTodayStats()` 取今日练习量/错题量/正确率；`db.getWeakPoints(5)` 取当前薄弱点；按科目归组输出。
-
-### 到期抽测
-1. `db.getDueReviews()` 获取 `next_review_at <= now` 且未完成的任务
-2. 逐个抽测对应知识点（结合 mistakes 表历史错题出题）
-3. 判分回写：
-   - 答对 → `db.updateReviewStage(topicId, true)` 升 Stage
-   - 答错 → `db.updateReviewStage(topicId, false)` 回滚 Stage 1 + `db.addMistake(...)` 记录
-4. 抽测量已由接口自动写 review 日志
-
-### 薄弱点报告
-`db.getWeakPoints(n)` 按 wrong_count 排序输出 Top N，附掌握度与针对性建议。
-
-## 数据库 API 调用
-
-```javascript
-const db = require('../db.js');
-
-// 今日数据
-const today = db.getTodayStats();      // {exercise, mistake, review, accuracy}
-
-// 到期复习
-const dueReviews = db.getDueReviews();
-
-// 复习结果回写
-db.updateReviewStage(topicId, true);   // {topic_id, stage:2, next_review_at}
-db.updateReviewStage(topicId, false);  // {topic_id, stage:1, next_review_at}
+```bash
+# 今日日志
+sqlite3 -json <技能目录>/learner.db "SELECT type,SUM(count) AS n FROM history_logs WHERE date=date('now','localtime') GROUP BY type;"
+# 薄弱点 Top5
+sqlite3 -json <技能目录>/learner.db "SELECT t.name,s.name AS subject,p.wrong_count,p.correct_count,ROUND(p.mastery_level,2) AS mastery FROM progress p JOIN topics t ON t.id=p.topic_id JOIN subjects s ON s.id=t.subject_id WHERE p.wrong_count>p.correct_count OR p.mastery_level<0.6 ORDER BY p.mastery_level ASC LIMIT 5;"
 ```
+
+正确率 = 1 − mistake/exercise（qa 类型不计入）。输出练习量、分科统计、薄弱点 Top3 与明确行动建议。
+
+## 到期抽测
+
+1. 取到期任务：
+   ```bash
+   sqlite3 -json <技能目录>/learner.db "SELECT rq.id,rq.topic_id,rq.stage,t.name AS 知识点,s.name AS 科目 FROM review_queue rq JOIN topics t ON t.id=rq.topic_id JOIN subjects s ON s.id=t.subject_id WHERE rq.is_reviewed=0 AND rq.next_review_at<=strftime('%s','now') ORDER BY rq.next_review_at ASC;"
+   ```
+2. 结合 mistakes 表该知识点的历史错题逐个抽测
+3. 判分回写用 queries.sql「复习完成」模板：答对升档、答错回 Stage1 并补记 mistakes；Stage5 答对移出队列
+4. 回写后记 review 日志（ON CONFLICT 累计）
+
+## 薄弱点报告
+
+薄弱点 TopN（同今日总结第二条查询，LIMIT 可调大），每条附掌握度与针对性建议。
 
 ## 艾宾浩斯间隔
 
 | Stage | 间隔 |
 |-------|------|
-| 1 | 1天 |
-| 2 | 2天 |
-| 3 | 4天 |
-| 4 | 8天 |
-| 5 | 16天 |
+| 1 | 1 天 |
+| 2-5 | 2/4/8/16 天 |
 
-答错重置 Stage=1。Stage 5 再答对即移出队列（is_reviewed=1）。
+答错重置 Stage=1；Stage 5 再答对 is_reviewed=1 移出队列。秒数：86400/172800/345600/691200/1382400。
 
 ## 输出格式
 
-### 今日总结
 ```
 📊 今日学习概况
-  练习：[N] 道 | 正确：[N] | 错误：[N] | 正确率：[X]%
+  练习：[N] 道 | 错误：[N] | 正确率：[X]% | 提问：[N] 次
 
 📚 分科统计
-  [科目1]：[N]题 [X]% ✓
-  [科目2]：[N]题 [X]% ⚠️
+  [科目]：[N]题 [X]% ✓
 
-⚠️ 今日薄弱点
-  1. [知识点] — 错误 N 次
-
-💡 建议
-  [针对性建议]
-```
-
-### 到期提醒 / 薄弱点报告
-```
 ⏰ 到期复习 [N] 个：[知识点列表]
 
 ⚠️ 薄弱点 Top 5
 1. [知识点] — [科目]
    错误次数：[N] | 掌握度：[X]%
    建议：[针对性建议]
+
+💡 行动建议：今天复习 X 个弱点，明天目标 Y 道题
 ```

@@ -1,53 +1,50 @@
-# Ebbinghaus Review & Log Core (SQLite Version)
+# 复习与日志模块 (Review.md)
 
-> **角色锚点**：以冷酷、严谨的教练视角回复。不灌鸡汤，直接指出问题。答错必回滚 Stage 1。
+> **角色锚点**：冷酷、严谨的教练视角。不灌鸡汤，直接指出问题。答错必回滚 Stage 1。
 
-## 工作流程
+## 模式1：今日数据归纳
 
-### 模式1：今日数据归纳
-1. 调用 `db.getLogsByDate(date)` 读取今日日志
-2. 过滤出今日新增的单词名字
-3. 严格按照 `[名词/动词/形容词/副词]` 分类编排罗列给人类
-4. **遗忘风险预测**：明确标出针对用户所考的 `target_exam` 而言，哪 3 个词在考题中设伏最深、明天最容易忘记
-
-### 模式2：到期抽测
-1. 调用 `db.getDueReviews()` 获取到期复习列表
-2. 根据单词，调用 `db.getWord(word)` 获取单词详情
-3. 针对 `target_exam` 的常考题型，混合组装 5 道硬核测试题（如考研侧重英译中与长难句选词，托福雅思侧重语境造句）
-4. **状态机回写 (State Transition)**：
-   - 若答对：调用 `db.updateReviewStage(word, true)` 提升艾宾浩斯 `stage` 级别，推迟下一次复习时间
-   - 若答错：调用 `db.updateReviewStage(word, false)` 该词的 `stage` 立即强制**回滚至 Stage 1**，24 小时后重新抽测
-5. 调用 `db.addLog(date, 'review', count)` 记录复习日志
-
-## 数据库 API 调用
-
-```javascript
-const db = require('../db.js');
-
-// 获取当前时间戳
-const now = Math.floor(Date.now() / 1000);
-
-// 获取到期复习
-const dueWords = db.getDueReviews();
-console.log(`到期复习: ${dueWords.length} 个单词`);
-
-// 获取今日日志
-const todayLogs = db.getLogsByDate('2026-08-15');
-console.log('今日日志:', todayLogs);
-
-// 处理复习结果
-function handleReviewResult(word, isCorrect) {
-    const result = db.updateReviewStage(word, isCorrect);
-    if (result) {
-        console.log(`${word}: Stage ${result.stage}, 下次复习: ${result.next_review_time}`);
-    }
-}
-
-// 记录复习日志
-db.addLog('2026-08-15', 'review', dueWords.length);
+```bash
+# 今日日志
+sqlite3 -json <技能目录>/vocabulary.db "SELECT type,SUM(count) AS n FROM history_logs WHERE date=date('now','localtime') GROUP BY type;"
+# 今日新词（按词性分类罗列）
+sqlite3 -json <技能目录>/vocabulary.db "SELECT word,pos,tag FROM words WHERE substr(created_at,1,10)=date('now','localtime') ORDER BY pos;"
 ```
 
-## 艾宾浩斯间隔（权威定义，与 schemas/Schemas.md 保持一致）
+按 `[名词/动词/形容词/副词]` 分类编排；**遗忘风险预测**：标出对 target_exam 设伏最深、明天最容易忘的 3 个词（优先取 Stage 低、frequency 高的）。
+
+## 模式2：到期抽测
+
+1. 取到期任务：
+   ```bash
+   sqlite3 -json <技能目录>/vocabulary.db "SELECT word,stage,next_review_time FROM review_queue WHERE next_review_time<=strftime('%s','now') ORDER BY next_review_time ASC LIMIT 5;"
+   ```
+2. 逐词 `SELECT ... FROM words WHERE word='...';` 取详情
+3. 按 target_exam 常考题型组装硬核测试题（考研侧重英译中与长难句选词，托福雅思侧重语境造句）
+4. 判分回写用 queries.sql「复习完成」模板（把 `答对` 替换为 `1`/`0`）：
+   ```bash
+   sqlite3 <技能目录>/vocabulary.db <<'SQL'
+   .timeout 5000
+   BEGIN;
+   UPDATE review_queue SET
+       stage = CASE WHEN 答对 THEN MIN(stage + 1, 5) ELSE 1 END,
+       is_reviewed = CASE WHEN stage >= 5 AND 答对 THEN 1 ELSE 0 END,
+       next_review_time = CASE
+           WHEN stage >= 5 AND 答对 THEN next_review_time
+           WHEN NOT 答对 THEN strftime('%s','now') + 86400
+           ELSE strftime('%s','now') + CASE MIN(stage + 1, 5)
+                WHEN 2 THEN 172800 WHEN 3 THEN 345600 WHEN 4 THEN 691200 WHEN 5 THEN 1382400
+                ELSE 86400 END
+       END
+   WHERE word = '目标词';
+   INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'review',1)
+     ON CONFLICT(date,type) DO UPDATE SET count=count+1;
+   COMMIT;
+   SQL
+   ```
+5. 答错必须明确告知"已回滚 Stage 1，24 小时后再测"
+
+## 艾宾浩斯间隔（权威定义）
 
 | Stage | 答对后 | 答错后 | 间隔天数 |
 |-------|--------|--------|---------|
@@ -55,13 +52,12 @@ db.addLog('2026-08-15', 'review', dueWords.length);
 | 2 | Stage 3 | Stage 1 | 2天 |
 | 3 | Stage 4 | Stage 1 | 4天 |
 | 4 | Stage 5 | Stage 1 | 8天 |
-| 5 | 保持Stage 5 | Stage 1 | 16天 |
+| 5 | 保持Stage 5(移出队列) | Stage 1 | 16天 |
 
-间隔公式：`REVIEW_INTERVALS = [86400, 172800, 345600, 691200, 1382400]`（秒）
+秒数：86400 / 172800 / 345600 / 691200 / 1382400。
 
 ## 输出格式
 
-### 今日总结
 ```
 📊 今日学习概况
   新增：[N] 个单词 | 复习：[N] 个 | 正确：[N] | 错误：[N]

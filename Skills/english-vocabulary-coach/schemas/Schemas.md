@@ -1,5 +1,8 @@
 # Data Contract Specification (SQLite Version)
+
 本文件定义了系统标准数据库拓扑。大模型在执行初始化创建或追加写入时，必须严格对照本文件独立章节的层级进行结构化输出。
+
+> 建库唯一入口是 `schema.sql`（幂等，可重复执行）；全部业务 SQL 模板见 `queries.sql`，AI 执行前先读它，不要凭记忆写 SQL。
 
 ## 1. Database Schema (SQLite)
 

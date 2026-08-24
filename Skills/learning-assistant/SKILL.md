@@ -1,50 +1,49 @@
 ---
 name: learning-assistant
 description: 通用学习教练技能：支持任意学科的知识点讲解、出题练习、错题记录与艾宾浩斯复习，通过 SQLite 持久追踪薄弱点，随用户提问自动采集知识漏洞。当用户想学习或查询知识点、做题练习、记录错题、分析薄弱点或安排复习总结时使用。
-version: 1.2.0
+version: 1.3.0
 entrypoint: SKILL.md
 ---
 
 # 通用学习助手（Learning Assistant）
 
-> **系统提示词**：`./SYSTEM_PROMPT.md` 是完全自包含的助手提示词，直接复制到 RikkaHub 助手的系统提示词中即可。本文件是技能目录内的说明与 API 参考。
+> **系统提示词**：`./SYSTEM_PROMPT.md` 是完全自包含的助手提示词，直接复制到 RikkaHub 助手的系统提示词中即可。本文件是技能目录内的说明与 SQL 操作参考。
 
 ## 环境要求
 
 | 依赖 | 说明 |
 |------|------|
-| Node.js ≥ 16 | 驱动 db.js |
-| sqlite3 CLI | `apt install sqlite3`（Debian/Ubuntu）；db.js 通过命令行操作数据库 |
+| sqlite3 CLI | 唯一依赖，`apt install sqlite3`（Debian/Ubuntu） |
 
-- **零 npm 依赖**：无需 `npm install`。
-- 数据库文件：`./learner.db`（自动建库建表）。
-- 可选环境变量：`LEARNING_DB_PATH`（库路径）、`SQLITE3_BIN`（sqlite3 可执行文件路径）。
+- **零 Node/npm 依赖**：所有数据操作通过 sqlite3 命令行完成。
+- 数据库文件：`<技能目录>/learner.db`（首次用 schema.sql 幂等建库建表）。
 
 ## 文件结构
 
 ```
 learning-assistant/
-├── SKILL.md              # 本文件（技能入口 + API 参考）
+├── SKILL.md              # 本文件（技能入口 + SQL 参考）
 ├── SYSTEM_PROMPT.md      # 自包含系统提示词（复制进助手）
 ├── README.md             # 使用说明
-├── selfcheck.js          # 环境自检脚本（node selfcheck.js）
-├── db.js                 # 数据库操作层（sqlite3 CLI 后端）
+├── selfcheck.sh          # 环境自检脚本（sh selfcheck.sh）
 ├── package.json          # 元信息（无依赖）
 ├── schemas/
-│   └── Schemas.md        # 数据库 schema
+│   ├── schema.sql        # 表结构（幂等，可重复执行）
+│   ├── queries.sql       # 全部业务 SQL 模板
+│   └── Schemas.md        # 数据库设计说明
 └── modules/
-    ├── Vocab.md          # 知识点讲解模块
-    ├── Exercise.md       # 练习模块
-    └── Review.md         # 复习引擎模块
+    ├── Vocab.md          # 知识问答模块（检索三路+入库+定级）
+    ├── Exercise.md       # 练习模块（出题加权+判分落库模板）
+    └── Review.md         # 复习引擎模块（今日总结+到期抽测）
 ```
 
 ## 快速自检
 
 ```bash
-node ./selfcheck.js
+sh ./selfcheck.sh
 ```
 
-输出 Node 版本、`skill_dir`、档案、到期复习数与今日统计即正常；加载失败时自带中文排查提示。
+输出 sqlite3 版本、各表行数、到期复习数、档案状态即正常；缺 sqlite3 时给出安装命令。
 
 ## 部署到 RikkaHub 工作区
 
@@ -55,57 +54,54 @@ node ./selfcheck.js
 └── learning-assistant/     # 本目录内容原样放入
 ```
 
-- 工作区内执行 `apt install -y sqlite3`，然后 `node /workspace/learning-assistant/selfcheck.js` 验证
+- 工作区内执行 `apt install -y sqlite3`，然后 `sh /workspace/learning-assistant/selfcheck.sh` 验证
 - 若克隆整仓（技能实际位于 `/workspace/MySkills/Skills/learning-assistant`），无需改任何文件：SYSTEM_PROMPT 内置 find 定位回退，助手首次调用报错时会自动定位真实目录并固定
 
-## 数据库 API 参考
+## SQL 操作参考
 
-### 用户档案
+### 数据库操作三式
 
-| 函数 | 说明 |
-|------|------|
-| `getProfile()` | 获取用户档案 `{exam, stage, exam_date}` |
-| `updateProfile({exam, stage, exam_date})` | 更新档案（仅允许这三个字段） |
-| `setExam(exam)` / `setStage(stage)` / `setExamDate(date)` | 单字段便捷写入 |
+```bash
+# 1. 查询（结构化 JSON 输出）
+sqlite3 -json <技能目录>/learner.db "SELECT ..."
 
-### 科目 / 知识点
+# 2. 写入（多条语句包事务，.timeout 防锁）
+sqlite3 <技能目录>/learner.db <<'SQL'
+.timeout 5000
+BEGIN;
+...;
+COMMIT;
+SQL
 
-| 函数 | 说明 |
-|------|------|
-| `addSubject(name, fullName?, weight?)` | 添加科目，幂等；返回 `{id, created}` |
-| `getAllSubjects()` / `getSubject(id)` | 查询科目 |
-| `addTopic(subjectId, name, parentId?, examWeight?)` | 添加知识点；返回 `{id, created}` |
-| `getTopics(subjectId?, keyword?)` | 模糊搜索知识点列表 |
-| `getTopic(idOrKeyword, keywordHint?)` | 按 id 查询；传字符串或 `(null,'关键词')` 时模糊匹配返回最佳单个结果 |
+# 3. 建库/补表/旧库升级（幂等）
+sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
+```
 
-### 错题 / 掌握度
+完整模板见 `schemas/queries.sql`；表契约见 `schemas/Schemas.md`。执行前先读它们，不要凭记忆写 SQL。
 
-| 函数 | 说明 |
-|------|------|
-| `addMistake(topicId, question, wrongAnswer, correctAnswer, explanation)` | 记错题（同题重复自动累计 mistake_count），同步累计 progress.wrong_count 并写日志 |
-| `updateProgress(topicId, isCorrect)` | 更新掌握度（首答保守起步，不会一答对就 100%），自动写练习日志 |
-| `getMistakesByTopic(topicId)` | 该知识点错题列表 |
-| `getWeakPoints(n)` | 错误最多的 n 个知识点（出题加权依据） |
+### 三铁律
 
-### 复习队列（艾宾浩斯）
+1. 任何 INSERT 前先 SELECT 查重：科目按 `subjects.name`、知识点按 `subject_id+name`、问题按 `questions.question`；命中即复用。
+2. 遇到陌生考试代码（如 408、396）先联网搜索构成，禁止瞎猜。
+3. 分科硬规则：代码 ≠ 课程名（408 = 数学+英语+政治+408专业课四门）；数学需确认数一/数二/数三再建科。
 
-间隔 `[1, 2, 4, 8, 16]` 天。答对升档、答错回 Stage 1；Stage 5 再答对移出队列。
+### 核心表速览
 
-| 函数 | 说明 |
-|------|------|
-| `addToReviewQueue(topicId, stage=1)` | 加入/重置队列（复用已有行，不累积） |
-| `getReviewQueue()` | 全部待复习 |
-| `getDueReviews(currentTime?)` | 到期任务（启动时必须检查并提醒） |
-| `updateReviewStage(topicId, correct)` | 更新阶段；返回 `{topic_id, stage, next_review_at}` 或 `null` |
-| `removeFromReviewQueue(topicId)` | 移除 |
+| 表 | 用途 | 关键列 |
+|----|------|--------|
+| user_profile | 用户档案 | exam, stage, exam_date |
+| subjects | 科目 | name(UNIQUE), full_name, weight |
+| topics | 知识点 | subject_id, name, keywords, UNIQUE(subject_id,name) |
+| questions | 提问记录 | question(UNIQUE), times_asked, answer_digest, technique |
+| mistakes | 错题 | topic_id, question, UNIQUE(topic_id,question,wrong_answer,correct_answer) |
+| progress | 掌握度 | topic_id(PK), correct_count, wrong_count, mastery_level |
+| review_queue | 艾宾浩斯队列 | topic_id, stage(1~5), next_review_at, is_reviewed |
+| history_logs | 学习日志 | date, type(qa/exercise/mistake/review), count, UNIQUE(date,type) |
 
-### 日志与统计
+### 薄弱点判定
 
-`history_logs` 按 `(date, type)` 去重累加，type ∈ `vocab_search / exercise / mistake / review`。
+`WHERE wrong_count > correct_count OR mastery_level < 0.6`，按 `mastery_level ASC` 排序；错题多的知识点出题概率约 ×2。
 
-| 函数 | 说明 |
-|------|------|
-| `addLog(type, count=1, date?=今天)` | 手动记日志（查词记 vocab_search；练习/错题/复习接口已自动记录） |
-| `getLogsByDate(date)` / `getLogs()` | 查询日志 |
-| `getTodayStats()` | `{date, vocab_search, exercise, mistake, review, accuracy}` |
-| `getStats()` | 总览（含 backend、due_reviews、today） |
+### 艾宾浩斯规则
+
+间隔 `[86400, 172800, 345600, 691200, 1382400]` 秒 = 1/2/4/8/16 天。答对升档、答错回 Stage 1；Stage 5 再答对移出队列。回写模板见 queries.sql「复习完成」。

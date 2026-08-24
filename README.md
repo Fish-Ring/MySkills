@@ -11,9 +11,8 @@
 
 ## 运行环境
 
-- Node.js ≥ 16（apt 安装即可）
-- sqlite3 命令行工具：`apt install -y sqlite3`
-- **零 npm 依赖**：db.js 直接通过 sqlite3 CLI 操作数据库，无需编译任何原生模块（安卓 rootfs/proot 友好）
+- sqlite3 命令行工具：`apt install -y sqlite3` —— **唯一依赖**
+- 零 Node/npm 依赖：所有数据操作直接用 sqlite3 CLI 完成，无需编译任何原生模块（安卓 rootfs/proot 友好，Node 18 也能跑）
 
 ## 快速开始
 
@@ -29,16 +28,16 @@
 
 2. 在工作区内执行 `apt install -y sqlite3`
 3. 新建助手，把对应技能的 `SYSTEM_PROMPT.md` 全文粘贴到助手系统提示词中——提示词已内置技能目录定位与 find 回退
-4. 首次对话自动引导初始化
+4. 首次对话自动引导初始化（扫旧库 → 建科 → 收集档案）
 
 ### 命令行自检
 
 ```bash
-node /workspace/learning-assistant/selfcheck.js
-node /workspace/english-vocabulary-coach/selfcheck.js
+sh /workspace/learning-assistant/selfcheck.sh
+sh /workspace/english-vocabulary-coach/selfcheck.sh
 ```
 
-输出 Node 版本、档案与统计概要即正常。
+输出 sqlite3 版本、各表行数与档案状态即正常。
 
 ## 文件结构
 
@@ -49,23 +48,26 @@ MySkills/
 ├── .gitignore
 └── Skills/
     ├── english-vocabulary-coach/
-    │   ├── SKILL.md           # 技能入口（API 参考）
+    │   ├── SKILL.md           # 技能入口（SQL 操作参考）
     │   ├── SYSTEM_PROMPT.md   # 自包含系统提示词（复制进助手）
     │   ├── README.md
-    │   ├── selfcheck.js       # 环境自检脚本
-    │   ├── db.js              # 数据库操作层（sqlite3 CLI 后端）
-    │   ├── migrate.js         # v1 JSON 数据迁移（可选）
-    │   ├── package.json
-    │   ├── schemas/Schemas.md
+    │   ├── selfcheck.sh       # 环境自检脚本
+    │   ├── package.json       # 元信息（无依赖）
+    │   ├── schemas/
+    │   │   ├── schema.sql     # 表结构（幂等）
+    │   │   ├── queries.sql    # 业务 SQL 模板
+    │   │   └── Schemas.md
     │   └── modules/           # Vocab / Exercise / Review
     └── learning-assistant/
         ├── SKILL.md
         ├── SYSTEM_PROMPT.md
         ├── README.md
-        ├── selfcheck.js       # 环境自检脚本
-        ├── db.js
+        ├── selfcheck.sh       # 环境自检脚本
         ├── package.json
-        ├── schemas/Schemas.md
+        ├── schemas/
+        │   ├── schema.sql     # 表结构（幂等）
+        │   ├── queries.sql    # 业务 SQL 模板
+        │   └── Schemas.md
         └── modules/           # Vocab / Exercise / Review
 ```
 
@@ -73,12 +75,15 @@ MySkills/
 
 每个技能必须包含：
 
-- `SKILL.md` —— 技能主入口：环境要求、文件结构、完整 API 参考（带 frontmatter：name/description/version/entrypoint）
-- `SYSTEM_PROMPT.md` —— **完全自包含**的系统提示词，直接粘贴到助手的系统提示词中使用，不依赖运行时读取其他文件；末尾保留 `{{locale}}`、`{{cur_date}}` 占位符
+- `SKILL.md` —— 技能主入口：环境要求、文件结构、SQL 操作参考（带 frontmatter：name/description/version/entrypoint）
+- `SYSTEM_PROMPT.md` —— **完全自包含**的系统提示词，直接粘贴到助手的系统提示词中使用；内置技能目录定位与 find 回退；末尾保留 `{{locale}}`、`{{cur_date}}` 占位符
 - `README.md` —— 使用说明
-- `db.js` —— 数据库操作层（sqlite3 CLI 后端，同步 API）
-- `modules/` —— 功能模块（按职责拆分）
-- `schemas/` —— 数据库 schema 定义
+- `selfcheck.sh` —— 环境自检脚本（sh 即可运行）
+- `schemas/schema.sql` —— 幂等表结构，建库唯一入口
+- `schemas/queries.sql` —— 全部业务 SQL 模板（AI 执行前先读它，不凭记忆写 SQL）
+- `modules/` —— 功能模块（按职责拆分，含可直接执行的 SQL 步骤）
+
+数据操作铁律：任何 INSERT 前先 SELECT 查重；写入用事务 + `.timeout 5000`。
 
 ## License
 
