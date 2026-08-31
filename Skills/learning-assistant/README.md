@@ -1,6 +1,6 @@
-# Learning Assistant (通用学习助手) v1.3.1
+# Learning Assistant (通用学习助手) v1.4.0
 
-任意学科的错题追踪 + 薄弱点分析 + 艾宾浩斯复习引擎。**零 Node/npm 依赖**，只需 sqlite3 命令行工具。
+预答→精查薄弱点，2次查库封顶。**零 Node/npm 依赖**，只需 sqlite3。
 
 ## 快速开始
 
@@ -33,17 +33,16 @@ learning-assistant/
 │   ├── schema.sql        # 表结构（幂等，建库唯一入口）
 │   ├── queries.sql       # 全部业务 SQL 模板
 │   └── Schemas.md        # 数据库设计说明
-└── modules/              # Vocab / Exercise / Review 功能模块（含 SQL 步骤）
+└── modules/              # 轻量模块（复习/练习，按需）
 ```
 
 ## 核心机制
 
 | 机制 | 说明 |
 |------|------|
-| 问答流水线 | 提问 → 检索三路（历史相似问题/相关知识点/关联薄弱点）→ 作答 → 先查重入库 → 薄弱点定级 |
-| questions 表 | 记录每个问题及 times_asked——问过的问题重复提问会被识别为薄弱信号 |
-| 薄弱点口径 | `wrong_count > correct_count OR mastery_level < 0.6`；错题多的知识点出题概率约 ×2 |
-| 艾宾浩斯 | 1/2/4/8/16 天五档；答错回 Stage 1，Stage 5 答对移出队列 |
+| 问答 | 预答草拟2-3个要点 → 批量 IN 精查本科目薄弱点 → 薄弱点感知作答 → 探针确认后才记 wrong_count |
+| 记录 | questions 总是 times_asked+1；仅确认不会时 progress wrong_count+1 |
+| 复习 | 仅用户说复习/总结时查 progress TopN，不做 Stage 自动调度 |
 
 ## 数据操作约定
 

@@ -23,10 +23,9 @@ mistakes      错题。topic_id, question, wrong_answer, correct_answer,
               UNIQUE(topic_id, question, wrong_answer, correct_answer)
 progress      掌握度。topic_id PRIMARY KEY, correct_count, wrong_count,
               last_practice_at, mastery_level(REAL)
-review_queue  艾宾浩斯队列。topic_id, stage(1~5), next_review_at(UNIX秒),
-              is_reviewed
+review_queue  兼容保留（旧版艾宾浩斯队列）。topic_id, stage(1~5), next_review_at(UNIX秒), is_reviewed；新版轻量复习不主动写入，仅查 progress TopN
 history_logs  学习日志。date(TEXT YYYY-MM-DD), type, count,
-              UNIQUE(date, type)；type ∈ qa / exercise / mistake / review
+               UNIQUE(date, type)；type ∈ qa / exercise / mistake / review
 user_profile  用户档案。exam, stage(基础/强化/冲刺/自学), exam_date；
               建库时种子行 id=1
 ```
@@ -41,16 +40,14 @@ user_profile  用户档案。exam, stage(基础/强化/冲刺/自学), exam_date
 | 仅提问 | 只累计 times_asked，不动 progress 掌握度 |
 | 做错/不会 | progress.wrong_count+1 → mistakes 记录（先查重）→ review_queue 注入 stage=1 → mistake 日志 |
 | 自评已懂 | progress.correct_count+1 → exercise 日志 |
-| 复习完成 | 答对升档、答错回 Stage1；Stage5 答对 is_reviewed=1 移出队列 → review 日志 |
+| 复习完成 | 兼容保留：答对升档、答错回 Stage1；新版轻量复习仅查 progress |
 
 ## 薄弱点判定口径
 
 ```sql
-WHERE p.wrong_count > p.correct_count OR p.mastery_level < 0.6
-ORDER BY p.mastery_level ASC, p.wrong_count DESC
+WHERE p.wrong_count > p.correct_count
+ORDER BY p.mastery_level ASC
 ```
-
-错题越多的知识点出题概率越高（约 ×2）。
 
 ## 索引
 
