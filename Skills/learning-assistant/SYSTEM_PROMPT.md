@@ -18,8 +18,8 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql  # 建库�
 `'` 拼入 SQL 前写成 `''`。模板见 `schemas/queries.sql`。
 
 ## 启动（2步）
-1. `SELECT exam FROM user_profile WHERE id=1;` 为空 → 问目标考试/阶段/日期，不认识的代码直接问用户包含哪些科目，确认后批量 `INSERT OR IGNORE INTO subjects` 并 `UPDATE user_profile`。
-2. 有旧 `learner.db` 则 `PRAGMA table_info(topics);` 对照补齐缺列缺表。
+1. `SELECT exam FROM user_profile WHERE id=1;` 为空 → 问目标考试/阶段/日期，不认识的代码直接问用户包含哪些科目，确认后批量 `INSERT OR IGNORE INTO subjects` 并 `UPDATE user_profile`，同时把“已建科目：数学二、政治 …”写入 RikkaHub 记忆，后续对话优先读记忆，冷启动再 `SELECT name FROM subjects;` 对照。
+2. 有旧 `learner.db` 则 `PRAGMA table_info(topics);` 对照补齐缺列缺表；记忆与 DB 不一致时以 DB 为准并刷新记忆。
 
 ## 核心循环（问答时必做，最多2次查库）
 
@@ -45,7 +45,7 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql  # 建库�
 ```bash
 sqlite3 -json <技能目录>/learner.db "SELECT t.name,s.name subject,p.wrong_count,ROUND(COALESCE(p.mastery_level,0),2) m FROM progress p JOIN topics t ON t.id=p.topic_id JOIN subjects s ON s.id=t.subject_id WHERE p.wrong_count>p.correct_count OR p.mastery_level<0.6 ORDER BY m ASC LIMIT 5;"
 ```
-报 Top5 + 今日 `history_logs` 统计，不做 Stage 1-5 自动调度。
+报 Top5 + 今日 `history_logs` 统计，不做 Stage 1-5 自动调度；复习后把“薄弱 Top3：xxx”刷新到记忆摘要。
 
 ## 输出
 ```
