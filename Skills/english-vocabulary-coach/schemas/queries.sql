@@ -4,7 +4,7 @@
 --       文本值中的单引号必须写成两个 '' 再拼入 SQL（It's → 'It''s'，英语例句撇号高频）
 
 -- ============ 查重（INSERT 前必跑） ============
-SELECT id, word, pos, meaning FROM words WHERE word = '单词';
+SELECT id, word, pos, meaning FROM words WHERE word = '单词' LIMIT 1;
 SELECT id, word, pos, meaning FROM words WHERE word LIKE '%词根%' LIMIT 10;
 
 -- ============ 幂等写入 ============
@@ -35,11 +35,11 @@ SELECT word, meaning FROM words ORDER BY frequency DESC LIMIT 10;
 INSERT INTO review_queue (word, stage, next_review_time, is_reviewed)
 SELECT '单词', 1, strftime('%s','now') + 86400, 0
 WHERE NOT EXISTS (SELECT 1 FROM review_queue WHERE word = '单词' AND is_reviewed = 0);
--- 到期任务
+-- 到期任务（LIMIT 20 防积压爆炸）
 SELECT rq.id, rq.word, rq.stage, w.meaning
 FROM review_queue rq LEFT JOIN words w ON w.word = rq.word
 WHERE rq.is_reviewed = 0 AND rq.next_review_time <= strftime('%s','now')
-ORDER BY rq.next_review_time ASC;
+ORDER BY rq.next_review_time ASC LIMIT 20;
 -- 复习完成（把 1/0 替换为答对与否）：答对升档、答错回 Stage1；Stage5 答对标记完成
 UPDATE review_queue SET
     stage = CASE WHEN 答对 THEN MIN(stage + 1, 5) ELSE 1 END,
@@ -59,4 +59,5 @@ SELECT type, SUM(count) AS n FROM history_logs WHERE date = date('now','localtim
 -- 总览
 SELECT (SELECT COUNT(*) FROM words) AS words,
        (SELECT COUNT(*) FROM review_queue WHERE is_reviewed = 0) AS queue_size,
-       (SELECT target_exam FROM user_profile WHERE id = 1) AS target_exam;
+       (SELECT target_exam FROM user_profile WHERE id = 1 LIMIT 1) AS target_exam;
+-- 单词相似自动合并：先 SELECT word='新词' LIMIT 1，命中则 UPDATE 合并释义/例句，不命中再 INSERT

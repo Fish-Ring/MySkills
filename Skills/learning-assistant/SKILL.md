@@ -1,7 +1,7 @@
 ---
 name: learning-assistant
-description: 通用学习教练技能：答疑时自动感知本科目薄弱点并针对性讲解，精准记录薄弱点便于复习，通过 SQLite 持久追踪。当用户想学习知识点、做题或查看薄弱点时使用。
-version: 1.4.0
+description: 通用学习教练技能：答疑时自动感知本科目薄弱点并针对性讲解，相似知识点/问题自动合并，查询全限流，通过 SQLite 持久追踪。
+version: 1.4.1
 entrypoint: SKILL.md
 ---
 
@@ -61,9 +61,10 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
 ```
 `'` 拼入 SQL 前写成 `''`。完整模板见 `schemas/queries.sql`。
 
-### 约束（2条）
-1. INSERT 前必查重（subjects.name / topics(subject_id,name) / questions.question）。
-2. 不认识的考试代码直接问用户包含哪些科目。
+### 约束（3条）
+1. INSERT 前必查重+相似查（归一相等/别名交集自动合并，不新建）。
+2. 所有查询必带 LIMIT（单行 LIMIT 1，列表 5/20/50）。
+3. 不认识的考试代码直接问用户包含哪些科目。
 
 ### 核心表
 | 表 | 关键列 |

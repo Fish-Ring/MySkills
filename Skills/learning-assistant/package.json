@@ -1,5 +1,5 @@
 {
   "name": "learning-assistant",
-  "version": "1.4.0",
-  "description": "通用学习助手 - 预答→精查薄弱点，2次查库封顶的 SQLite 学习助手"
+  "version": "1.4.1",
+  "description": "通用学习助手 - 预答精查+限流+相似自动合并"
 }
