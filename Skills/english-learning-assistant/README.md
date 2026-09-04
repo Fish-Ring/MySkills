@@ -1,4 +1,4 @@
-# English Learning Assistant (英语学习助手) v2.4.1
+# English Learning Assistant (英语学习助手) v2.5.1
 
 本地优先、多考试自适应的英语学习助手。**零 Node/npm 依赖**，只需 sqlite3 命令行工具。
 
@@ -17,8 +17,8 @@ sh /workspace/english-learning-assistant/selfcheck.sh
 
 1. 在 APP 中创建工作区（rootfs），把本目录内容放入工作区，推荐路径 `/workspace/english-learning-assistant/`
 2. 在工作区内执行 `apt install -y sqlite3`，运行 `sh /workspace/english-learning-assistant/selfcheck.sh` 验证
-3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中（已内置技能目录定位与 find 回退，整仓克隆等其他布局也能自动适配）
-4. 首次对话会扫描旧库并要求设置目标考试（CET4 / CET6 / 考研英语 / 专升本 / 雅思 / 托福）
+3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中（已内置技能目录定位与 find 回退，强调技能绑定，缺信息时主动向用户提问）
+4. 首次对话会扫描旧库并在缺信息时主动向你提问以完成设置（CET4 / CET6 / 考研英语 / 专升本 / 雅思 / 托福）
 
 ## 文件结构
 
@@ -40,6 +40,7 @@ english-learning-assistant/
 
 | 机制 | 说明 |
 |------|------|
+| 绑定 | 已绑定 english-learning-assistant，禁止脱离技能空答 |
 | 考试适配 | target_exam 未设置前不回答词汇问题；频率/例句/考点全部对齐目标考试大纲 |
 | 入库三件套 | 先查重 → INSERT words → UPDATE total_words_count → review_queue 注入 stage=1 → vocab_search 日志 |
 | 艾宾浩斯 | 1/2/4/8/16 天五档；答错回 Stage 1，Stage 5 答对移出队列 |

@@ -1,4 +1,4 @@
-# Learning Assistant (通用学习助手) v1.4.0
+# Learning Assistant (通用学习助手) v1.4.3
 
 预答→精查薄弱点，2次查库封顶。**零 Node/npm 依赖**，只需 sqlite3。
 
@@ -17,8 +17,8 @@ sh /workspace/learning-assistant/selfcheck.sh
 
 1. 在 APP 中创建工作区（rootfs），把本目录内容放入工作区，推荐路径 `/workspace/learning-assistant/`
 2. 在工作区内执行 `apt install -y sqlite3`，运行 `sh /workspace/learning-assistant/selfcheck.sh` 验证
-3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中（已内置技能目录定位与 find 回退，整仓克隆等其他布局也能自动适配）
-4. 首次对话会自动扫描旧库并引导初始化（考试代码确认 → 分科建档 → 档案收集）
+3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中（已内置技能目录定位与 find 回退，强调技能绑定，缺信息时主动向用户提问）
+4. 首次对话会自动扫描旧库并引导初始化，缺信息时主动向你提问（考试/科目/薄弱点确认，单选或开放式）
 
 ## 文件结构
 
@@ -40,6 +40,7 @@ learning-assistant/
 
 | 机制 | 说明 |
 |------|------|
+| 绑定 | 已绑定 learning-assistant，禁止脱离技能空答 |
 | 问答 | 预答草拟2-3个要点 → 批量 IN 精查本科目薄弱点 → 薄弱点感知作答 → 探针确认后才记 wrong_count |
 | 记录 | questions 总是 times_asked+1；仅确认不会时 progress wrong_count+1 |
 | 复习 | 仅用户说复习/总结时查 progress TopN，不做 Stage 自动调度 |
