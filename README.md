@@ -9,35 +9,45 @@
 | **learning-assistant** | 为任意学科提供答疑、薄弱点记录与复习追踪 | 日常答疑、错题追踪与考前复习 |
 | **english-learning-assistant** | 提供查词、阅读与写作批改、精读讲解与生词复习 | 英语查词、阅读/写作辅导与词汇复习 |
 
+> 建议不同技能分不同助手使用，数据更干净、记忆不串台。
+>
+> 工作区占存储较大，推荐在不干扰的情况下多个助手共用同一个工作区（本仓库技能之间不会互相干扰）。
+
 ## 运行环境
 
 - sqlite3 命令行工具：`apt install -y sqlite3` —— **唯一依赖**
 - 零 Node/npm 依赖，无需编译任何原生模块（安卓 rootfs/proot 环境友好）
 
-## 快速开始
+## 搭配 RikkaHub 使用（推荐流程）
 
-### 搭配 RikkaHub
+1. **安装技能**：`设置 → 扩展管理 → Agent Skills`，点左下角 `+` 选择“从 GitHub 导入”，粘入本仓库对应技能目录链接后导入。
 
-1. 在 APP 中创建工作区（rootfs），把技能目录放入工作区根下：
+2. **创建工作区**：`设置 → 扩展管理 → 工作区 → 创建工作区 → 安装 Rootfs`。建议在下方关闭“工具审批”所有开关（否则每次工具调用都要手动确认）。工作区创建完成后，点右上角进入“终端”。
 
+3. **安装依赖并验证**：终端内依次执行
+   ```bash
+   apt update && apt install -y sqlite3
+   # 按需选择其一或全部验证
+   sh /workspace/learning-assistant/selfcheck.sh
+   sh /workspace/english-learning-assistant/selfcheck.sh
+   ```
+   输出 sqlite3 版本、各表行数与档案状态即正常。工作区目录建议：
    ```
    /workspace/
-   ├── learning-assistant/          # Skills/learning-assistant 的内容
-   └── english-learning-assistant/    # Skills/english-learning-assistant 的内容（共用工作区时）
+   ├── learning-assistant/            # Skills/learning-assistant 的内容
+   └── english-learning-assistant/    # Skills/english-learning-assistant 的内容（可共用同一工作区）
    ```
 
-2. 在工作区内执行 `apt install -y sqlite3`
-3. 新建助手，把对应技能的 `SYSTEM_PROMPT.md` 全文粘贴到助手系统提示词中——提示词已内置技能目录定位与 find 回退，并强调技能绑定（不写库视为未完成）
-4. 首次对话自动引导初始化（扫旧库 → 建科 → 收集档案），缺信息时助手会主动向你提问（单选/开放式由 AI 或你的设置决定）
+4. **新建助手并绑定**：新建助手，将对应技能的 `SYSTEM_PROMPT.md` 全文粘贴到系统提示词中；为助手绑定上一步的工作区、开启对应技能，并在“记忆”中开启全部功能。建议先在记忆中补充个人信息，例如“我是张三，正在备考考研数学二”。
 
-### 命令行自检
+5. **开始使用**：首次对话会自动扫描旧库并引导初始化，缺信息时助手会主动向你提问（单选或开放式，按你的设置）。初始化完成后即可直接提问、做题或让其总结复习，相关数据会持久化到数据库与记忆中，切换对话无需重复配置。
+
+### 命令行自检（本地/工作区通用）
 
 ```bash
 sh /workspace/learning-assistant/selfcheck.sh
 sh /workspace/english-learning-assistant/selfcheck.sh
 ```
-
-输出 sqlite3 版本、各表行数与档案状态即正常。
 
 ## 文件结构
 

@@ -13,12 +13,25 @@ sh /workspace/learning-assistant/selfcheck.sh
 # 自定义库路径：LEARNING_DB=/tmp/test.db sh selfcheck.sh
 ```
 
-## 搭配 RikkaHub 使用
+## 搭配 RikkaHub 使用（推荐流程）
 
-1. 在 APP 中创建工作区（rootfs），把本目录内容放入工作区，推荐路径 `/workspace/learning-assistant/`
-2. 在工作区内执行 `apt install -y sqlite3`，运行 `sh /workspace/learning-assistant/selfcheck.sh` 验证
-3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中（已内置技能目录定位与 find 回退，强调技能绑定，缺信息时主动向用户提问）
-4. 首次对话会自动扫描旧库并引导初始化，缺信息时主动向你提问（考试/科目/薄弱点确认，单选或开放式）
+1. **安装技能**：`设置 → 扩展管理 → Agent Skills`，点左下角 `+` 选择“从 GitHub 导入”，粘入本仓库或 `learning-assistant` 目录链接后导入。
+
+2. **创建工作区**：`设置 → 扩展管理 → 工作区 → 创建工作区 → 安装 Rootfs`。建议关闭下方“工具审批”所有开关（否则每次调用都要确认）。建好后点右上角进入“终端”。
+
+3. **安装依赖并验证**：终端内执行
+   ```bash
+   apt update && apt install -y sqlite3
+   sh /workspace/learning-assistant/selfcheck.sh
+   ```
+
+4. **新建助手**：将 `SYSTEM_PROMPT.md` 全文粘贴到助手系统提示词中；绑定上一步的工作区、开启本技能，并在“记忆”中开启全部功能。建议补充个人信息，例如“我是张三，正在备考考研数学二”。
+
+5. **开始使用**：首次对话会自动扫描旧库并引导初始化，缺信息时助手会主动提问（单选或开放式）。完成后即可直接提问、做题或总结复习，数据持久化到数据库与记忆中。
+
+> 不同学习技能建议分不同助手使用，避免记忆串台。
+>
+> 工作区占存储较大，推荐在不干扰的情况下多个助手共用同一个工作区（本仓库技能之间不会互相干扰）。
 
 ## 文件结构
 
