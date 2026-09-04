@@ -1,6 +1,6 @@
-# English Vocabulary Coach (英语词汇教练) v2.4.1
+# English Learning Assistant (英语学习助手) v2.4.1
 
-本地优先、多考试自适应的英语词汇教练。**零 Node/npm 依赖**，只需 sqlite3 命令行工具。
+本地优先、多考试自适应的英语学习助手。**零 Node/npm 依赖**，只需 sqlite3 命令行工具。
 
 ## 快速开始
 
@@ -8,22 +8,22 @@
 # Debian/Ubuntu rootfs（RikkaHub 工作区等）
 apt install -y sqlite3
 
-sh /workspace/english-vocabulary-coach/selfcheck.sh
-# 本地开发：cd Skills/english-vocabulary-coach && sh selfcheck.sh
+sh /workspace/english-learning-assistant/selfcheck.sh
+# 本地开发：cd Skills/english-learning-assistant && sh selfcheck.sh
 # 自定义库路径：VOCAB_DB=/tmp/test.db sh selfcheck.sh
 ```
 
 ## 搭配 RikkaHub 使用
 
-1. 在 APP 中创建工作区（rootfs），把本目录内容放入工作区，推荐路径 `/workspace/english-vocabulary-coach/`
-2. 在工作区内执行 `apt install -y sqlite3`，运行 `sh /workspace/english-vocabulary-coach/selfcheck.sh` 验证
+1. 在 APP 中创建工作区（rootfs），把本目录内容放入工作区，推荐路径 `/workspace/english-learning-assistant/`
+2. 在工作区内执行 `apt install -y sqlite3`，运行 `sh /workspace/english-learning-assistant/selfcheck.sh` 验证
 3. 新建助手，把 `SYSTEM_PROMPT.md` 全文粘贴到助手的系统提示词中（已内置技能目录定位与 find 回退，整仓克隆等其他布局也能自动适配）
 4. 首次对话会扫描旧库并要求设置目标考试（CET4 / CET6 / 考研英语 / 专升本 / 雅思 / 托福）
 
 ## 文件结构
 
 ```
-english-vocabulary-coach/
+english-learning-assistant/
 ├── SKILL.md              # 技能入口 + SQL 操作参考
 ├── SYSTEM_PROMPT.md      # 自包含系统提示词（复制进助手）
 ├── README.md             # 本文件

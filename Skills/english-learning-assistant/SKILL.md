@@ -1,11 +1,11 @@
 ---
-name: english-vocabulary-coach
-description: 英语备考词汇教练技能：面向 CET4/CET6/考研/专升本/雅思/托福等考试，提供查词辨析、按考试难度抽测、艾宾浩斯复习与学习统计。当用户查单词、背单词、做英语题、备考英语考试或复习词汇时使用。
+name: english-learning-assistant
+description: 提供查词、阅读与写作批改、精读讲解与生词复习的英语学习助手。
 version: 2.5.0
 entrypoint: SKILL.md
 ---
 
-# 英语词汇教练（English Vocabulary Coach）
+# 英语学习助手（English Learning Assistant）
 
 > **系统提示词**：`./SYSTEM_PROMPT.md` 是完全自包含的助手提示词，直接复制到 RikkaHub 助手的系统提示词中即可。本文件是技能目录内的说明与 SQL 操作参考。
 
@@ -21,7 +21,7 @@ entrypoint: SKILL.md
 ## 文件结构
 
 ```
-english-vocabulary-coach/
+english-learning-assistant/
 ├── SKILL.md              # 本文件（技能入口 + SQL 参考）
 ├── SYSTEM_PROMPT.md      # 自包含系统提示词（复制进助手）
 ├── README.md             # 使用说明
@@ -51,11 +51,11 @@ sh ./selfcheck.sh
 
 ```
 /workspace/
-└── english-vocabulary-coach/   # 本目录内容原样放入
+└── english-learning-assistant/   # 本目录内容原样放入
 ```
 
-- 工作区内执行 `apt install -y sqlite3`，然后 `sh /workspace/english-vocabulary-coach/selfcheck.sh` 验证
-- 若克隆整仓（技能实际位于 `/workspace/MySkills/Skills/english-vocabulary-coach`），无需改任何文件：SYSTEM_PROMPT 内置 find 定位回退，助手首次调用报错时会自动定位真实目录并固定
+- 工作区内执行 `apt install -y sqlite3`，然后 `sh /workspace/english-learning-assistant/selfcheck.sh` 验证
+- 若克隆整仓（技能实际位于 `/workspace/MySkills/Skills/english-learning-assistant`），无需改任何文件：SYSTEM_PROMPT 内置 find 定位回退，助手首次调用报错时会自动定位真实目录并固定
 
 ## SQL 操作参考
 

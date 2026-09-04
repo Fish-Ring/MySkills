@@ -24,7 +24,7 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql  # 建库�
 ## 核心循环（问答时必做，最多2次查库）
 
 ```
-① 预答草拟（不查库）：先在心里用2-3行列出本题真正要用的核心知识点名（如“泰勒展开、佩亚诺余项”），并抽 1主2细分的专业名词 tag（必须是名词如“矩阵,逆矩阵,秩”，禁止句子/描述，1-4字）。
+① 预答草拟（不查库）：先在心里用2-3行列出本题真正要用的核心知识点名（如“泰勒展开、佩亚诺余项”），并抽取专业名词 tag（1个主标签加最多5个细分，自由决定数量，均为专业名词，禁止句子/描述）。
 ② 精查薄弱点（1条批量SQL，带分科+tag兜底）：
    SELECT t.name, t.tags, COALESCE(p.wrong_count,0) wc FROM topics t
    LEFT JOIN progress p ON p.topic_id=t.id
@@ -57,7 +57,7 @@ sqlite3 -json <技能目录>/learner.db "SELECT (SELECT COUNT(*) FROM questions)
 写库后回一行摘要“已入库：科目/知识点 [tag1,tag2]（第N次提问）”。
 
 ## 约束
-- INSERT前必 SELECT 查重+相似查，归一相等/别名/tag交集自动合并；tag 必须是专业名词（禁止句子）。
+- INSERT前必 SELECT 查重+相似查，归一相等/别名/tag交集自动合并；tag 必须是专业名词，禁止句子。
 - 所有查询必带 LIMIT（单行 LIMIT 1，列表 5/20，分页时 LIMIT 20 OFFSET n）。
 - 除 sqlite3 外无其他依赖。
 

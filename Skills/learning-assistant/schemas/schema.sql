@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS topics (
     subject_id INTEGER NOT NULL,
     name TEXT NOT NULL,                    -- 知识点名
     keywords TEXT DEFAULT '',              -- 别名/关键词（逗号分隔，供模糊检索）
-    tags TEXT DEFAULT '',                  -- 专业名词标签（1主2细分，逗号分隔，如"矩阵,逆矩阵,秩"）
+    tags TEXT DEFAULT '',                  -- 专业名词标签（1主加最多5细分，自由决定，逗号分隔，如"矩阵,逆矩阵,秩"）
     parent_id INTEGER,
     exam_weight REAL DEFAULT 3.0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS questions (
     question TEXT NOT NULL UNIQUE,         -- 问题原文（查重键）
     answer_digest TEXT DEFAULT '',         -- 解答要点摘要（复习用）
     technique TEXT DEFAULT '',             -- 关联的通用答题技巧
-    tags TEXT DEFAULT '',                  -- 专业名词标签（1主2细分，如"矩阵,行列式,特征值"）
+    tags TEXT DEFAULT '',                  -- 专业名词标签（1主加最多5细分，自由决定，如"矩阵,行列式,特征值"）
     times_asked INTEGER DEFAULT 1,         -- 重复提问自动 +1，不重复插入
     last_asked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

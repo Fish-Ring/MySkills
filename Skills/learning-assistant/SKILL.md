@@ -1,6 +1,6 @@
 ---
 name: learning-assistant
-description: 通用学习教练技能：答疑时自动感知本科目薄弱点并针对性讲解，专业名词 tag 细分检索，相似知识点/问题自动合并，分页+统计全覆盖，通过 SQLite 持久追踪。
+description: 为任意学科提供答疑、薄弱点记录与复习追踪的通用学习助手。
 version: 1.4.2
 entrypoint: SKILL.md
 ---
@@ -62,7 +62,7 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
 `'` 拼入 SQL 前写成 `''`。完整模板见 `schemas/queries.sql`。
 
 ### 约束（4条）
-1. INSERT 前必查重+相似查（归一相等/别名/tag交集自动合并，不新建）；tag 必须是专业名词（1-4字如“矩阵/秩”，禁止句子）。
+1. INSERT 前必查重+相似查（归一相等/别名/tag交集自动合并，不新建）；tag 必须是专业名词，禁止句子。
 2. 所有查询必带 LIMIT（单行 LIMIT 1，列表 5/20，分页时 LIMIT 20 OFFSET n）。
 3. 列表超 20 条时先 COUNT(*) 再分页拉取，AI 按需定 OFFSET。
 4. 不认识的考试代码直接问用户包含哪些科目。
@@ -71,7 +71,7 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
 | 表 | 关键列 |
 |----|--------|
 | subjects | name(UNIQUE) |
-| topics | subject_id, name, tags(专业名词1主2细分) |
+| topics | subject_id, name, tags(专业名词，1主加最多5细分，自由决定) |
 | questions | question(UNIQUE), tags, times_asked |
 | progress | topic_id PK, wrong_count, correct_count |
 | mistakes/history_logs | 错题/日志 |

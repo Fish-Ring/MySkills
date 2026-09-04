@@ -1,5 +1,5 @@
 #!/bin/sh
-# english-vocabulary-coach 环境自检：验证 sqlite3 可用、库可读写、输出核心统计
+# english-learning-assistant 环境自检：验证 sqlite3 可用、库可读写、输出核心统计
 # 用法: sh selfcheck.sh   （可选环境变量 VOCAB_DB 指定库路径）
 
 set -e
@@ -7,7 +7,7 @@ set -e
 case "$0" in */*) SCRIPT_DIR=$(CDPATH= cd -- "${0%/*}" && pwd) ;; *) SCRIPT_DIR=. ;; esac
 DB="${VOCAB_DB:-$SCRIPT_DIR/vocabulary.db}"
 
-echo "== english-vocabulary-coach selfcheck =="
+echo "== english-learning-assistant selfcheck =="
 
 command -v sqlite3 >/dev/null 2>&1 || { echo "[FAIL] 未找到 sqlite3，请先执行: apt install sqlite3"; exit 1; }
 set -- $(sqlite3 --version)

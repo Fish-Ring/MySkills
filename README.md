@@ -6,8 +6,8 @@
 
 | 技能 | 描述 | 用途 |
 |------|------|------|
-| **learning-assistant** | 通用学习教练：知识点讲解、出题练习、错题记录、艾宾浩斯复习，随提问自动采集薄弱点 | 任意学科错题追踪、薄弱点分析、复习引擎 |
-| **english-vocabulary-coach** | 英语备考词汇教练：查词辨析、按考试难度抽测、艾宾浩斯复习与统计 | CET4/6、考研、专升本、雅思、托福备考 |
+| **learning-assistant** | 为任意学科提供答疑、薄弱点记录与复习追踪 | 日常答疑、错题追踪与考前复习 |
+| **english-learning-assistant** | 提供查词、阅读与写作批改、精读讲解与生词复习 | 英语查词、阅读/写作辅导与词汇复习 |
 
 ## 运行环境
 
@@ -23,7 +23,7 @@
    ```
    /workspace/
    ├── learning-assistant/          # Skills/learning-assistant 的内容
-   └── english-vocabulary-coach/    # Skills/english-vocabulary-coach 的内容（共用工作区时）
+   └── english-learning-assistant/    # Skills/english-learning-assistant 的内容（共用工作区时）
    ```
 
 2. 在工作区内执行 `apt install -y sqlite3`
@@ -34,7 +34,7 @@
 
 ```bash
 sh /workspace/learning-assistant/selfcheck.sh
-sh /workspace/english-vocabulary-coach/selfcheck.sh
+sh /workspace/english-learning-assistant/selfcheck.sh
 ```
 
 输出 sqlite3 版本、各表行数与档案状态即正常。
@@ -47,7 +47,7 @@ MySkills/
 ├── LICENSE
 ├── .gitignore
 └── Skills/
-    ├── english-vocabulary-coach/
+    ├── english-learning-assistant/
     │   ├── SKILL.md           # 技能入口（SQL 操作参考）
     │   ├── SYSTEM_PROMPT.md   # 自包含系统提示词（复制进助手）
     │   ├── README.md
