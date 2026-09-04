@@ -1,4 +1,4 @@
--- 英语词汇教练 v2.4.1 - 数据库模式（全幂等，可重复执行）
+-- 英语词汇教练 v2.5.0 - 数据库模式（全幂等，可重复执行）
 -- 初始化：sqlite3 /workspace/english-vocabulary-coach/vocabulary.db < schemas/schema.sql
 -- 结构契约详见同目录 Schemas.md
 

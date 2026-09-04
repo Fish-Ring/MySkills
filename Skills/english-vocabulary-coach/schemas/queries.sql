@@ -1,4 +1,4 @@
--- 英语词汇教练 v2.4.1 - 常用 SQL 模板
+-- 英语词汇教练 v2.5.0 - 常用 SQL 模板
 -- 用法：sqlite3 -json <技能目录>/vocabulary.db "<语句>"
 -- 铁律：任何 INSERT 前必须先跑对应查重语句；
 --       文本值中的单引号必须写成两个 '' 再拼入 SQL（It's → 'It''s'，英语例句撇号高频）
@@ -22,12 +22,18 @@ VALUES (date('now','localtime'), 'vocab_search', 1)
 ON CONFLICT(date, type) DO UPDATE SET count = count + 1;
 
 -- ============ 检索 ============
--- 按标签取词（抽测出题）
+-- 按标签取词（抽测出题，分页）
 SELECT word, meaning, tag FROM words WHERE tag = '标签' ORDER BY RANDOM() LIMIT 10;
--- 最近收录
-SELECT word, meaning, created_at FROM words ORDER BY id DESC LIMIT 10;
--- 高频优先
-SELECT word, meaning FROM words ORDER BY frequency DESC LIMIT 10;
+SELECT COUNT(*) FROM words WHERE tag='标签';
+SELECT word, meaning, tag FROM words WHERE tag='标签' ORDER BY id DESC LIMIT 20 OFFSET 0;
+-- 最近收录（分页）
+SELECT COUNT(*) FROM words;
+SELECT word, meaning, created_at FROM words ORDER BY id DESC LIMIT 20 OFFSET 0;
+-- 高频优先（分页，frequency>=4 考研高频）
+SELECT COUNT(*) FROM words WHERE frequency>=4;
+SELECT word, meaning, frequency FROM words WHERE frequency>=4 ORDER BY frequency DESC, id DESC LIMIT 20 OFFSET 0;
+-- 生词判定：frequency>=4 视为考研高频，自动入词库 spectacle 场景用
+SELECT frequency FROM words WHERE word='生词' LIMIT 1;
 
 -- ============ 艾宾浩斯复习队列 ============
 -- 间隔：Stage 1-5 = 1/2/4/8/16 天 = 86400/172800/345600/691200/1382400 秒

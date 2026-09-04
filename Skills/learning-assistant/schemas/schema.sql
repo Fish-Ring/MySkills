@@ -1,4 +1,4 @@
--- 通用学习助手 v1.3.1 - 数据库模式（全幂等，可重复执行）
+-- 通用学习助手 v1.4.2 - 数据库模式（全幂等，可重复执行）
 -- 初始化：sqlite3 /workspace/learning-assistant/learner.db < schemas/schema.sql
 
 CREATE TABLE IF NOT EXISTS subjects (
@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS topics (
     subject_id INTEGER NOT NULL,
     name TEXT NOT NULL,                    -- 知识点名
     keywords TEXT DEFAULT '',              -- 别名/关键词（逗号分隔，供模糊检索）
+    tags TEXT DEFAULT '',                  -- 专业名词标签（1主2细分，逗号分隔，如"矩阵,逆矩阵,秩"）
     parent_id INTEGER,
     exam_weight REAL DEFAULT 3.0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS questions (
     question TEXT NOT NULL UNIQUE,         -- 问题原文（查重键）
     answer_digest TEXT DEFAULT '',         -- 解答要点摘要（复习用）
     technique TEXT DEFAULT '',             -- 关联的通用答题技巧
+    tags TEXT DEFAULT '',                  -- 专业名词标签（1主2细分，如"矩阵,行列式,特征值"）
     times_asked INTEGER DEFAULT 1,         -- 重复提问自动 +1，不重复插入
     last_asked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -89,6 +91,8 @@ CREATE TABLE IF NOT EXISTS history_logs (
 INSERT OR IGNORE INTO user_profile (id) VALUES (1);
 
 CREATE INDEX IF NOT EXISTS idx_topics_subject ON topics(subject_id);
+CREATE INDEX IF NOT EXISTS idx_topics_subject_id ON topics(subject_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_questions_subject_topic ON questions(subject_id, topic_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_mistakes_topic ON mistakes(topic_id);
 CREATE INDEX IF NOT EXISTS idx_mistakes_count ON mistakes(mistake_count DESC);
 CREATE INDEX IF NOT EXISTS idx_progress_mastery ON progress(mastery_level ASC);

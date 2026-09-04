@@ -1,7 +1,7 @@
 ---
 name: learning-assistant
-description: 通用学习教练技能：答疑时自动感知本科目薄弱点并针对性讲解，相似知识点/问题自动合并，查询全限流，通过 SQLite 持久追踪。
-version: 1.4.1
+description: 通用学习教练技能：答疑时自动感知本科目薄弱点并针对性讲解，专业名词 tag 细分检索，相似知识点/问题自动合并，分页+统计全覆盖，通过 SQLite 持久追踪。
+version: 1.4.2
 entrypoint: SKILL.md
 ---
 
@@ -61,17 +61,18 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
 ```
 `'` 拼入 SQL 前写成 `''`。完整模板见 `schemas/queries.sql`。
 
-### 约束（3条）
-1. INSERT 前必查重+相似查（归一相等/别名交集自动合并，不新建）。
-2. 所有查询必带 LIMIT（单行 LIMIT 1，列表 5/20/50）。
-3. 不认识的考试代码直接问用户包含哪些科目。
+### 约束（4条）
+1. INSERT 前必查重+相似查（归一相等/别名/tag交集自动合并，不新建）；tag 必须是专业名词（1-4字如“矩阵/秩”，禁止句子）。
+2. 所有查询必带 LIMIT（单行 LIMIT 1，列表 5/20，分页时 LIMIT 20 OFFSET n）。
+3. 列表超 20 条时先 COUNT(*) 再分页拉取，AI 按需定 OFFSET。
+4. 不认识的考试代码直接问用户包含哪些科目。
 
 ### 核心表
 | 表 | 关键列 |
 |----|--------|
 | subjects | name(UNIQUE) |
-| topics | subject_id, name, UNIQUE(subject_id,name) |
-| questions | question(UNIQUE), times_asked |
+| topics | subject_id, name, tags(专业名词1主2细分) |
+| questions | question(UNIQUE), tags, times_asked |
 | progress | topic_id PK, wrong_count, correct_count |
 | mistakes/history_logs | 错题/日志 |
 | review_queue | 兼容保留，新版仅轻量复习用 progress TopN |

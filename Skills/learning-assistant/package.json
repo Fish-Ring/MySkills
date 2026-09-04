@@ -1,5 +1,5 @@
 {
   "name": "learning-assistant",
-  "version": "1.4.1",
-  "description": "通用学习助手 - 预答精查+限流+相似自动合并"
+  "version": "1.4.2",
+  "description": "通用学习助手 - 分页统计+专业名词tag+问即疑"
 }
