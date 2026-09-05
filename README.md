@@ -13,6 +13,8 @@
 >
 > 工作区占存储较大，推荐在不干扰的情况下多个助手共用同一个工作区（本仓库技能之间不会互相干扰）。
 
+> 技能演变与历史数据兼容：`docs/history/` 每版1个 md（精简记录变更与表结构影响），需回溯时先读它。
+
 ## 运行环境
 
 - sqlite3 命令行工具：`apt install -y sqlite3` —— **唯一依赖**
@@ -54,6 +56,7 @@ sh /workspace/english-learning-assistant/selfcheck.sh
 ```
 MySkills/
 ├── README.md                  # 本文件
+├── docs/history/              # 演变记录（每版1个 md，精简）
 ├── LICENSE
 ├── .gitignore
 └── Skills/

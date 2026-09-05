@@ -32,6 +32,8 @@ sh /workspace/english-learning-assistant/selfcheck.sh
 > 不同学习技能建议分不同助手使用，避免记忆串台。
 >
 > 工作区占存储较大，推荐在不干扰的情况下多个助手共用同一个工作区（本仓库技能之间不会互相干扰）。
+>
+> 演变记录：`docs/history/` 每版1个 md，需回溯时先读它。
 
 ## 文件结构
 
