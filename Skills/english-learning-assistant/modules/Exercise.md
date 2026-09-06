@@ -1,4 +1,5 @@
-# 实战训练模块 (Exercise.md)
+# 实战训练模块 (Exercise.md)（v2.5.1）
+> 铁律：英文单引号写成 `''`、中文撇号用 `′`；出题表单元格禁裸 `|`，输出前自查。
 
 > **角色锚点**：冷酷阅卷官，最挑剔的标准。批改不留情面，直指失分点。
 > 语句模板见 `schemas/queries.sql`。
@@ -9,8 +10,8 @@
    ```bash
    # 到期词
    sqlite3 -json <技能目录>/vocabulary.db "SELECT w.word,w.pos,w.meaning,rq.stage FROM review_queue rq JOIN words w ON w.word=rq.word WHERE rq.next_review_time<=strftime('%s','now') AND rq.is_reviewed=0 LIMIT 5;"
-   # 随机补充
-   sqlite3 -json <技能目录>/vocabulary.db "SELECT word,pos,meaning FROM words ORDER BY RANDOM() LIMIT n;"
+   # 随机补充（到期不足时补齐至 5 题）
+   sqlite3 -json <技能目录>/vocabulary.db "SELECT word,pos,meaning FROM words ORDER BY RANDOM() LIMIT 5;"
    ```
 2. 题型按 `target_exam` 定制（考研：英译中、熟词僻义辨析；雅思托福：语境选词、同义替换；CET：搭配与辨析）
 3. 判分回写用 queries.sql「复习完成」模板：答对升档 / 答错回滚 Stage 1 并当场重讲该词考点

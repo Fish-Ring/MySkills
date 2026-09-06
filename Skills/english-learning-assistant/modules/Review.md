@@ -15,28 +15,18 @@ sqlite3 -json <技能目录>/vocabulary.db "SELECT word,pos,tag FROM words WHERE
 
 ## 模式2：到期抽测
 
-1. 取到期任务：
+1. 取到期任务（必须 SELECT 出 rq.id 供回写用）：
    ```bash
-   sqlite3 -json <技能目录>/vocabulary.db "SELECT word,stage,next_review_time FROM review_queue WHERE next_review_time<=strftime('%s','now') ORDER BY next_review_time ASC LIMIT 5;"
+   sqlite3 -json <技能目录>/vocabulary.db "SELECT rq.id,rq.word,rq.stage,w.meaning FROM review_queue rq LEFT JOIN words w ON w.word=rq.word WHERE rq.is_reviewed=0 AND rq.next_review_time<=strftime('%s','now') ORDER BY rq.next_review_time ASC LIMIT 5;"
    ```
 2. 逐词 `SELECT ... FROM words WHERE word='...';` 取详情
 3. 按 target_exam 常考题型组装硬核测试题（考研侧重英译中与长难句选词，托福雅思侧重语境造句）
-4. 判分回写用 queries.sql「复习完成」模板（把 `答对` 替换为 `1`/`0`）：
+4. 判分回写见 queries.sql「复习完成」模板（把 `:is_correct` 替换为 `1`/`0`，WHERE 用 `id=队列行ID AND word='单词'` 双限定）：
    ```bash
    sqlite3 <技能目录>/vocabulary.db <<'SQL'
    .timeout 5000
    BEGIN;
-   UPDATE review_queue SET
-       stage = CASE WHEN 答对 THEN MIN(stage + 1, 5) ELSE 1 END,
-       is_reviewed = CASE WHEN stage >= 5 AND 答对 THEN 1 ELSE 0 END,
-       next_review_time = CASE
-           WHEN stage >= 5 AND 答对 THEN next_review_time
-           WHEN NOT 答对 THEN strftime('%s','now') + 86400
-           ELSE strftime('%s','now') + CASE MIN(stage + 1, 5)
-                WHEN 2 THEN 172800 WHEN 3 THEN 345600 WHEN 4 THEN 691200 WHEN 5 THEN 1382400
-                ELSE 86400 END
-       END
-   WHERE word = '目标词';
+   -- 见 queries.sql「复习完成」全文，:is_correct→1/0，id/word 双限定；另记一条 review 日志
    INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'review',1)
      ON CONFLICT(date,type) DO UPDATE SET count=count+1;
    COMMIT;

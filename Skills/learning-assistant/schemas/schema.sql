@@ -1,4 +1,4 @@
--- 通用学习助手 v1.5.1 - 数据库模式（全幂等，可重复执行）
+-- 通用学习助手 v1.5.2 - 数据库模式（全幂等，可重复执行）
 -- 初始化：sqlite3 /workspace/learning-assistant/learner.db < schemas/schema.sql
 -- v1.5.0 新增三实体分立：progress=Mastery长期状态 / misconceptions=可复用认知模式 / mistakes=单次错误事件
 
@@ -173,17 +173,26 @@ CREATE TABLE IF NOT EXISTS history_logs (
 
 INSERT OR IGNORE INTO user_profile (id) VALUES (1);
 
--- v1.5.1 索引瘦身：M:N 表的 PRIMARY KEY 自带 (a,b) 索引，只需补反向 (b) 索引；
--- idx_topics_subject 被 (subject_id,id) 覆盖；review_queue 已废弃，索引一并退役
+-- v1.5.1/v1.5.2 索引瘦身：M:N 表的 PRIMARY KEY 自带 (a,b) 索引，只补反向 (b) 索引；
+-- idx_topics_subject 被 (subject_id,id) 覆盖；review_queue 已废弃索引退役；
+-- UNIQUE(date,type)/UNIQUE(topic_id,question,...) 左前缀覆盖单列索引；progress 热点改 (status,mastery_score) 复合
 DROP INDEX IF EXISTS idx_technique_topics_technique;
 DROP INDEX IF EXISTS idx_technique_questions_technique;
-DROP INDEX IF EXISTS idx_knowledge_mis_mis;
-DROP INDEX IF EXISTS idx_mistake_mis_mis;
+DROP INDEX IF EXISTS idx_knowledge_mis_topic;
+DROP INDEX IF EXISTS idx_mistake_mis_mistake;
 DROP INDEX IF EXISTS idx_question_topics_question;
 DROP INDEX IF EXISTS idx_topics_subject;
 DROP INDEX IF EXISTS idx_review_queue_due;
+DROP INDEX IF EXISTS idx_history_date;
+DROP INDEX IF EXISTS idx_mistakes_topic;
+DROP INDEX IF EXISTS idx_progress_status;
+DROP INDEX IF EXISTS idx_progress_mastery;
 -- techniques 通用行 primary_subject_id 为 NULL，UNIQUE 对 NULL 不生效，补表达式唯一索引防重
 CREATE UNIQUE INDEX IF NOT EXISTS idx_techniques_name_subject ON techniques(name, COALESCE(primary_subject_id,-1));
+-- misconceptions 查重用 lower(trim(title))，补表达式唯一索引统一口径（大小写变体自动合并）
+CREATE UNIQUE INDEX IF NOT EXISTS idx_misconceptions_title_nocase ON misconceptions(lower(trim(title)), type);
+-- COALESCE(primary_subject_id,-1) 查询杀死普通索引，补表达式索引
+CREATE INDEX IF NOT EXISTS idx_techniques_subject_coalesce ON techniques(COALESCE(primary_subject_id,-1));
 
 CREATE INDEX IF NOT EXISTS idx_topics_subject_id ON topics(subject_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_techniques_primary_subject ON techniques(primary_subject_id);
@@ -191,14 +200,11 @@ CREATE INDEX IF NOT EXISTS idx_techniques_name ON techniques(name);
 CREATE INDEX IF NOT EXISTS idx_technique_topics_topic ON technique_topics(topic_id);
 CREATE INDEX IF NOT EXISTS idx_technique_questions_question ON technique_questions(question_id);
 CREATE INDEX IF NOT EXISTS idx_misconceptions_type ON misconceptions(type);
-CREATE INDEX IF NOT EXISTS idx_knowledge_mis_topic ON knowledge_misconception(topic_id);
-CREATE INDEX IF NOT EXISTS idx_mistake_mis_mistake ON mistake_misconceptions(mistake_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_mis_mis ON knowledge_misconception(misconception_id);
+CREATE INDEX IF NOT EXISTS idx_mistake_mis_mis ON mistake_misconceptions(misconception_id);
 CREATE INDEX IF NOT EXISTS idx_question_topics_topic ON question_topics(topic_id);
-CREATE INDEX IF NOT EXISTS idx_progress_status ON progress(status);
+CREATE INDEX IF NOT EXISTS idx_progress_status_score ON progress(status, mastery_score);
 CREATE INDEX IF NOT EXISTS idx_questions_subject_topic ON questions(subject_id, topic_id, id DESC);
-CREATE INDEX IF NOT EXISTS idx_mistakes_topic ON mistakes(topic_id);
 CREATE INDEX IF NOT EXISTS idx_mistakes_count ON mistakes(mistake_count DESC);
-CREATE INDEX IF NOT EXISTS idx_progress_mastery ON progress(mastery_level ASC);
 CREATE INDEX IF NOT EXISTS idx_questions_topic ON questions(topic_id);
 CREATE INDEX IF NOT EXISTS idx_questions_last ON questions(last_asked_at DESC);
-CREATE INDEX IF NOT EXISTS idx_history_date ON history_logs(date);

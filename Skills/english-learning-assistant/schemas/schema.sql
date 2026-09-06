@@ -1,5 +1,5 @@
--- 英语词汇教练 v2.5.0 - 数据库模式（全幂等，可重复执行）
--- 初始化：sqlite3 /workspace/english-vocabulary-coach/vocabulary.db < schemas/schema.sql
+-- 英语学习助手 v2.5.1 - 数据库模式（全幂等，可重复执行）
+-- 初始化：sqlite3 <技能目录>/vocabulary.db < schemas/schema.sql
 -- 结构契约详见同目录 Schemas.md
 
 CREATE TABLE IF NOT EXISTS user_profile (
@@ -42,9 +42,10 @@ CREATE TABLE IF NOT EXISTS history_logs (
 
 INSERT OR IGNORE INTO user_profile (id) VALUES (1);
 
-CREATE INDEX IF NOT EXISTS idx_words_word ON words(word);
+-- v2.5.1 瘦身：word UNIQUE 自带索引、UNIQUE(date,type) 左前缀覆盖 date 单列
+DROP INDEX IF EXISTS idx_words_word;
+DROP INDEX IF EXISTS idx_history_date;
 CREATE INDEX IF NOT EXISTS idx_words_tag ON words(tag);
 CREATE INDEX IF NOT EXISTS idx_review_queue_time ON review_queue(next_review_time);
 CREATE INDEX IF NOT EXISTS idx_review_queue_word ON review_queue(word);
 CREATE INDEX IF NOT EXISTS idx_review_queue_due ON review_queue(next_review_time ASC, is_reviewed ASC);
-CREATE INDEX IF NOT EXISTS idx_history_date ON history_logs(date);

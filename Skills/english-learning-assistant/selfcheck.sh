@@ -22,6 +22,7 @@ echo "[OK] 数据库就绪: $DB"
 sqlite3 -header -column "$DB" "
 SELECT 'words' AS item, COUNT(*) AS n FROM words
 UNION ALL SELECT 'review_queue', COUNT(*) FROM review_queue
+UNION ALL SELECT 'history_logs', COUNT(*) FROM history_logs
 UNION ALL SELECT 'due_reviews', COUNT(*) FROM review_queue WHERE is_reviewed=0 AND next_review_time <= strftime('%s','now');
 SELECT 'target_exam' AS item, COALESCE(target_exam,'(未设置)') AS n FROM user_profile WHERE id=1;
 SELECT 'total_words_count' AS item, total_words_count AS n FROM user_profile WHERE id=1;

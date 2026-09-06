@@ -1,4 +1,4 @@
-# Data Contract Specification (SQLite Version)
+# 数据库模式（Schemas）
 
 本文件定义了系统标准数据库拓扑。大模型在执行初始化创建或追加写入时，必须严格对照本文件独立章节的层级进行结构化输出。
 
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS review_queue (
 CREATE TABLE IF NOT EXISTS history_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT,                             -- 日期 (YYYY-MM-DD)
-    type TEXT,                             -- 类型 (vocab_search/exercise/review)
+    type TEXT,                             -- 类型 (vocab_search/exercise/review/qa)
     count INTEGER DEFAULT 0,
     UNIQUE(date, type)
 );
@@ -72,12 +72,11 @@ CREATE TABLE IF NOT EXISTS history_logs (
 
 ## 2. Indexes
 ```sql
-CREATE INDEX IF NOT EXISTS idx_words_word ON words(word);
+-- v2.5.1 瘦身：word UNIQUE 自带索引、UNIQUE(date,type) 左前缀覆盖 date 单列
 CREATE INDEX IF NOT EXISTS idx_words_tag ON words(tag);
 CREATE INDEX IF NOT EXISTS idx_review_queue_time ON review_queue(next_review_time);
 CREATE INDEX IF NOT EXISTS idx_review_queue_word ON review_queue(word);
 CREATE INDEX IF NOT EXISTS idx_review_queue_due ON review_queue(next_review_time ASC, is_reviewed ASC);
-CREATE INDEX IF NOT EXISTS idx_history_date ON history_logs(date);
 ```
 
 ## 3. Data Format Standards
@@ -101,9 +100,11 @@ CREATE INDEX IF NOT EXISTS idx_history_date ON history_logs(date);
 {
   "word": "abandon",
   "stage": 1,
-  "next_review_time": 1782489600
+  "next_review_time": 1782489600,
+  "is_reviewed": 0
 }
 ```
+时间全为 UNIX 秒（`strftime('%s','now')`）；日期比较用 `date(x,'unixepoch','localtime')`。
 
 ### 3.3 Log Item Structure
 ```json

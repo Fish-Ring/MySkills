@@ -1,4 +1,5 @@
-# 词汇解析模块 (Vocab.md)
+# 词汇解析模块 (Vocab.md)（v2.5.1）
+> 铁律：英文单引号写成 `''`、中文撇号用 `′`；辨析对比表单元格禁裸 `|`（释义含 `|` 改中文“或”），输出前自查。
 
 > **角色锚点**：冷酷、严谨的备考教练。有话直说，不灌鸡汤。直击词汇死穴，指出硬伤。
 > 所有语句模板见 `schemas/queries.sql`。
@@ -42,10 +43,10 @@ VALUES ('abandon','v.','放弃；遗弃',5,'["abandon hope","abandon a plan"]',
         'The company abandoned the project.','a+band(绑)→不再绑→放弃','阅读高频词');
 -- 2. 词库计数
 UPDATE user_profile SET total_words_count=(SELECT COUNT(*) FROM words) WHERE id=1;
--- 3. 注入艾宾浩斯队列（1天后首复）
+-- 3. 注入艾宾浩斯队列（1天后首复；带 is_reviewed=0，已完成过的词可再次入队）
 INSERT INTO review_queue (word, stage, next_review_time)
 SELECT 'abandon',1,strftime('%s','now')+86400
-WHERE NOT EXISTS (SELECT 1 FROM review_queue WHERE word='abandon');
+WHERE NOT EXISTS (SELECT 1 FROM review_queue WHERE word='abandon' AND is_reviewed=0);
 -- 4. 日志
 INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'vocab_search',1)
 ON CONFLICT(date,type) DO UPDATE SET count=count+1;

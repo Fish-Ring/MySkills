@@ -5,6 +5,7 @@ node_modules/
 *.db
 *.db-journal
 *.db-wal
+*.db-shm
 
 # Logs
 *.log
@@ -12,3 +13,7 @@ node_modules/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Temp files
+*.tmp
+*.bak

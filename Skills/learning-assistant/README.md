@@ -1,17 +1,17 @@
-# Learning Assistant (通用学习助手) v1.5.1
+# Learning Assistant (通用学习助手) v1.5.2
 
 预答→精查薄弱点，2次查库封顶；三实体分立（Mastery/Misconception/Mistake）+ 出题加权。**零 Node/npm 依赖**，只需 sqlite3。
 
 ## 快速开始
 
 ```bash
-# Debian/Ubuntu rootfs（RikkaHub 工作区等）
-apt install -y sqlite3
+# Debian/Ubuntu rootfs（RikkaHub 工作区等，要求 sqlite3 ≥3.24）
+apt update && apt install -y sqlite3
 
 sh /workspace/learning-assistant/selfcheck.sh   # 幂等建库+各表行数+档案
 # 本地开发：cd Skills/learning-assistant && sh selfcheck.sh
 # 自定义库路径：LEARNING_DB=/tmp/test.db sh selfcheck.sh
-# 回溯演变：cat /workspace/docs/history/v1.5.1.md
+# 回溯演变：cat docs/history/v1.5.2.md（仓库根目录下执行；工作区内无 docs 目录时手动复制）
 ```
 
 ## 搭配 RikkaHub 使用（推荐流程）

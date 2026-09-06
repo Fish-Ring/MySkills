@@ -24,7 +24,7 @@ misconceptions 认知错误模式（可复用）。title+type(concept/formula/ca
 knowledge_misconception 知识点-错误 M:N。PRIMARY KEY(topic_id, misconception_id), severity 1-5
 mistake_misconceptions 错题-错误 M:N。PRIMARY KEY(mistake_id, misconception_id)
 review_queue  已废弃（兼容保留不写入）。通用技能不再使用艾宾浩斯队列，仅 english-learning-assistant 背词保留
-history_logs  学习日志。date(YYYY-MM-DD), type, count, UNIQUE(date, type)；type ∈ qa/mistake/review/exercise
+history_logs  学习日志。date(YYYY-MM-DD), type, count, UNIQUE(date, type)；type ∈ qa/mistake/review/exercise（通用技能不写 vocab_search）
 user_profile  用户档案。exam, stage, exam_date；建库时种子行 id=1
 techniques    技巧。name(≤12字)+primary_subject_id(NULL=通用) UNIQUE, description(IF-THEN+2-5步), keywords, tags
 technique_topics 技巧-知识点 M:N。PRIMARY KEY(technique_id, topic_id)，跨科由 AI 自主决定多关联一行
@@ -53,10 +53,29 @@ WHERE p.status='weak' ORDER BY p.mastery_score ASC
 -- 按错误类型聚合：SELECT type, SUM(occurrence_count) FROM misconceptions GROUP BY type ORDER BY 2 DESC
 ```
 
-## 索引
+## 索引（v1.5.2，共 17 个；删 8 冗余（含退役 1 废弃）+ 补 3 表达式）
 
-idx_topics_subject_id、idx_techniques_primary_subject/name（+表达式唯一 idx_techniques_name_subject 防 NULL 通用重名）、idx_technique_topics_topic、idx_technique_questions_question、idx_questions_subject_topic/topic/last、idx_mistakes_topic/count、idx_progress_mastery/status、idx_misconceptions_type、idx_knowledge_mis_topic、idx_mistake_mis_mistake、idx_question_topics_topic、idx_history_date——v1.5.1 已删7冗余（M:N 主键自带正向索引、topics 单列被复合覆盖、review_queue 废弃），完整定义见 schema.sql。
+```
+idx_topics_subject_id             topics(subject_id, id DESC)
+idx_techniques_primary_subject    techniques(primary_subject_id)
+idx_techniques_name               techniques(name)
+idx_techniques_name_subject       UNIQUE techniques(name, COALESCE(primary_subject_id,-1))（防 NULL 通用重名）
+idx_techniques_subject_coalesce   techniques(COALESCE(primary_subject_id,-1))（COALESCE 查询走索引）
+idx_technique_topics_topic        technique_topics(topic_id)（正向走主键自带索引）
+idx_technique_questions_question  technique_questions(question_id)
+idx_misconceptions_type           misconceptions(type)
+idx_misconceptions_title_nocase   UNIQUE misconceptions(lower(trim(title)), type)（大小写归一）
+idx_knowledge_mis_mis             knowledge_misconception(misconception_id)
+idx_mistake_mis_mis               mistake_misconceptions(misconception_id)
+idx_question_topics_topic         question_topics(topic_id)
+idx_progress_status_score         progress(status, mastery_score)（薄弱 Top5 热点）
+idx_questions_subject_topic       questions(subject_id, topic_id, id DESC)
+idx_mistakes_count                mistakes(mistake_count DESC)（错题本 TopN）
+idx_questions_topic               questions(topic_id)
+idx_questions_last                questions(last_asked_at DESC)
+```
+已删：M:N 正向 5（主键自带）、idx_topics_subject（被复合覆盖）、idx_history_date 与 idx_mistakes_topic（UNIQUE 左前缀覆盖）、idx_progress_mastery/status（被复合替代）、idx_review_queue_due（废弃表退役）。
 
 ## 记忆白名单
 
-仅 `基础信息（22408/7科/阶段）` + `DB概况计数（qs/tps/ms/tcs）` + `薄弱Top6 名称+掌握度` 可写入 RikkaHub 记忆摘要；错题题干/知识点概述/技巧长文永不进记忆。
+仅 `基础信息（考试/科目数/阶段）` + `DB概况计数（qs/tps/tracked/ms/subs/tcs 六计数）` + `薄弱Top6 名称+掌握度` 可写入 RikkaHub 记忆摘要；错题题干/知识点概述/技巧长文永不进记忆。

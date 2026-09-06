@@ -6,7 +6,7 @@
 
 ```bash
 # Debian/Ubuntu rootfs（RikkaHub 工作区等）
-apt install -y sqlite3
+apt update && apt install -y sqlite3
 
 sh /workspace/english-learning-assistant/selfcheck.sh
 # 本地开发：cd Skills/english-learning-assistant && sh selfcheck.sh

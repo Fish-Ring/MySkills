@@ -24,7 +24,7 @@ SELECT 'subjects' AS item, COUNT(*) AS n FROM subjects
 UNION ALL SELECT 'topics', COUNT(*) FROM topics
 UNION ALL SELECT 'questions', COUNT(*) FROM questions
 UNION ALL SELECT 'mistakes', COUNT(*) FROM mistakes
-UNION ALL SELECT 'due_reviews', COUNT(*) FROM review_queue WHERE is_reviewed=0 AND next_review_at <= strftime('%s','now');
+UNION ALL SELECT 'due_reviews(废弃表恒0，仅兼容)', COUNT(*) FROM review_queue WHERE is_reviewed=0 AND next_review_at <= strftime('%s','now');
 SELECT 'profile(exam/stage/date)' AS item, COALESCE(exam,'')||' / '||COALESCE(stage,'')||' / '||COALESCE(exam_date,'') AS n FROM user_profile WHERE id=1;
 "
 

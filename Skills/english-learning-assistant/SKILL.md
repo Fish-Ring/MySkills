@@ -1,13 +1,13 @@
 ---
 name: english-learning-assistant
 description: 提供查词、阅读与写作批改、精读讲解与生词复习的英语学习助手。
-version: 2.5.0
+version: 2.5.1
 entrypoint: SKILL.md
 ---
 
 # 英语学习助手（English Learning Assistant）
 
-> **系统提示词**：`./SYSTEM_PROMPT.md` 是完全自包含的助手提示词，直接复制到 RikkaHub 助手的系统提示词中即可。本文件是技能目录内的说明与 SQL 操作参考。
+> **系统提示词**：`./SYSTEM_PROMPT.md` 是开箱即用的助手提示词，直接复制到 RikkaHub 助手的系统提示词中即可（执行前须先读技能目录 `schemas/queries.sql` 模板）。本文件是技能目录内的说明与 SQL 操作参考。
 
 ## 环境要求
 
@@ -82,9 +82,10 @@ sqlite3 <技能目录>/vocabulary.db < <技能目录>/schemas/schema.sql
 ### 铁律
 
 1. **技能绑定**：本助手已绑定 `english-learning-assistant`，所有查词/精读/批改/复习必须通过 `vocabulary.db` 完成，禁止脱离技能空答；不写入数据库视为未完成。
-2. 任何 INSERT 前先 SELECT 查重（单词按 `words.word`）；命中即复用。例句/释义中的单引号写成 `''` 再拼 SQL。
+2. 任何 INSERT 前先 SELECT 查重（单词按 `words.word`）；命中即复用。例句/释义中的英文单引号写成 `''` 再拼 SQL；中文撇号一律用 `′`(U+2032)；写入一律 heredoc 内联事务，禁落文件。
 3. 数据库报错时原样告知用户并重试一次，再失败给修复命令。
-4. 需用户补充信息时主动提问（RikkaHub“询问用户”）：档案缺失/是否入库生词/是否逐段精读；文案由 AI 自行决定或遵循用户设置，默认单选也可开放式。
+4. 需用户补充信息时主动提问（RikkaHub“询问用户”）：档案缺失/是否入库生词/是否逐段精读；形式按实际情况定，开放式问清用 `text`，单选必须带“以上都不是/我自己说”兜底；文案由 AI 自行决定或遵循用户设置。
+5. 对比表/出题表单元格禁裸 `|`（释义含 `|` 改中文“或”），输出前自查。
 
 ### 核心表速览
 
@@ -93,8 +94,8 @@ sqlite3 <技能目录>/vocabulary.db < <技能目录>/schemas/schema.sql
 | user_profile | 用户配置 | target_exam, vocabulary_level, grammar_basis, total_words_count |
 | words | 词库 | word(UNIQUE), pos, meaning, frequency, collocation(JSON), tag, created_at |
 | review_queue | 艾宾浩斯队列 | word, stage(1~5), next_review_time, is_reviewed |
-| history_logs | 学习日志 | date, type(vocab_search/exercise/review), count, UNIQUE(date,type) |
+| history_logs | 学习日志 | date, type(vocab_search/exercise/review/qa), count, UNIQUE(date,type) |
 
 ### 艾宾浩斯规则
 
-间隔 `[86400, 172800, 345600, 691200, 1382400]` 秒 = 1/2/4/8/16 天。答对升档、答错回 Stage 1；Stage 5 再答对移出队列。回写模板见 queries.sql「复习完成」。
+间隔 `[86400, 172800, 345600, 691200, 1382400]` 秒 = 1/2/4/8/16 天。答对升档、答错回 Stage 1；Stage 5 答对置 `is_reviewed=1`（软移出，不 DELETE）。回写模板见 queries.sql「复习完成」（`:is_correct` 替换为 1/0，`id+word` 双限定）。

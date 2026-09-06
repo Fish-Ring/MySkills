@@ -1,7 +1,8 @@
--- 英语词汇教练 v2.5.0 - 常用 SQL 模板
--- 用法：sqlite3 -json <技能目录>/vocabulary.db "<语句>"
+-- 英语学习助手 v2.5.1 - 常用 SQL 模板
+-- 用法：sqlite3 -json <技能目录>/vocabulary.db "<语句>"；写入一律 heredoc 内联事务，禁落文件
 -- 铁律：任何 INSERT 前必须先跑对应查重语句；
---       文本值中的单引号必须写成两个 '' 再拼入 SQL（It's → 'It''s'，英语例句撇号高频）
+--       文本值中的英文单引号必须写成两个 '' 再拼入 SQL（It's → 'It''s'，英语例句撇号高频）；
+--       中文文本里的撇号一律用 ′(U+2032)，禁止英文 '（如 f′(x0)），防止截断 SQL 字符串
 
 -- ============ 查重（INSERT 前必跑） ============
 SELECT id, word, pos, meaning FROM words WHERE word = '单词' LIMIT 1;
@@ -46,13 +47,13 @@ SELECT rq.id, rq.word, rq.stage, w.meaning
 FROM review_queue rq LEFT JOIN words w ON w.word = rq.word
 WHERE rq.is_reviewed = 0 AND rq.next_review_time <= strftime('%s','now')
 ORDER BY rq.next_review_time ASC LIMIT 20;
--- 复习完成（把 1/0 替换为答对与否）：答对升档、答错回 Stage1；Stage5 答对标记完成
+-- 复习完成（执行前把 :is_correct 替换为 1 答对 / 0 答错，sqlite3 CLI 无参数绑定）：答对升档、答错回 Stage1；Stage5 答对置 is_reviewed=1（软移出，不 DELETE）
 UPDATE review_queue SET
-    stage = CASE WHEN 答对 THEN MIN(stage + 1, 5) ELSE 1 END,
-    is_reviewed = CASE WHEN stage >= 5 AND 答对 THEN 1 ELSE 0 END,
+    stage = CASE :is_correct WHEN 1 THEN MIN(stage + 1, 5) ELSE 1 END,
+    is_reviewed = CASE WHEN stage >= 5 AND :is_correct = 1 THEN 1 ELSE 0 END,
     next_review_time = CASE
-        WHEN stage >= 5 AND 答对 THEN next_review_time
-        WHEN NOT 答对 THEN strftime('%s','now') + 86400
+        WHEN stage >= 5 AND :is_correct = 1 THEN next_review_time
+        WHEN :is_correct = 0 THEN strftime('%s','now') + 86400
         ELSE strftime('%s','now') + CASE MIN(stage + 1, 5)
              WHEN 2 THEN 172800 WHEN 3 THEN 345600 WHEN 4 THEN 691200 WHEN 5 THEN 1382400
              ELSE 86400 END
