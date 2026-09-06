@@ -13,7 +13,7 @@
 >
 > 工作区占存储较大，推荐在不干扰的情况下多个助手共用同一个工作区（本仓库技能之间不会互相干扰）。
 
-> 技能演变与历史数据兼容：`docs/history/` 自 v1.4.2 起每版1个 md（精简记录变更与表结构影响，英语版随学习助手版本归档），需回溯时先读它。
+> 技能演变与历史数据兼容：各技能 `docs/history/` 每版1个 md（精简记录变更与表结构影响），需回溯时先读对应技能目录下的版本档；git tag 固化每个发布版本。
 
 ## 运行环境
 
@@ -56,7 +56,6 @@ sh /workspace/english-learning-assistant/selfcheck.sh
 ```
 MySkills/
 ├── README.md                  # 本文件
-├── docs/history/              # 演变记录（每版1个 md，精简）
 ├── LICENSE
 ├── .gitignore
 └── Skills/
@@ -66,6 +65,7 @@ MySkills/
     │   ├── README.md
     │   ├── selfcheck.sh       # 环境自检脚本
     │   ├── package.json       # 元信息（无依赖）
+    │   ├── docs/history/      # 演变记录（v2.3.0 起每版1个 md）
     │   ├── schemas/
     │   │   ├── schema.sql     # 表结构（幂等）
     │   │   ├── queries.sql    # 业务 SQL 模板
@@ -77,6 +77,7 @@ MySkills/
         ├── README.md
         ├── selfcheck.sh       # 环境自检脚本
         ├── package.json
+        ├── docs/history/      # 演变记录（v1.2.0 起每版1个 md）
         ├── schemas/
         │   ├── schema.sql     # 表结构（幂等）
         │   ├── queries.sql    # 业务 SQL 模板

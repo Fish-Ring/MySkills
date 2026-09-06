@@ -7,7 +7,7 @@ entrypoint: SKILL.md
 
 # 通用学习助手（Learning Assistant）
 
-> **系统提示词**：`./SYSTEM_PROMPT.md` 是开箱即用的助手提示词，直接复制到 RikkaHub 助手的系统提示词中即可（执行前须先读技能目录 `schemas/queries.sql` 模板与仓库根 `docs/history/`）。本文件是技能目录内的说明与 SQL 操作参考。
+> **系统提示词**：`./SYSTEM_PROMPT.md` 是开箱即用的助手提示词，直接复制到 RikkaHub 助手的系统提示词中即可（执行前须先读技能目录 `schemas/queries.sql` 模板与 `docs/history/` 版本档）。本文件是技能目录内的说明与 SQL 操作参考。
 
 ## 环境要求
 
@@ -31,7 +31,7 @@ learning-assistant/
 │   ├── queries.sql       # 业务 SQL 模板（精简版）
 │   └── Schemas.md
 ├── modules/              # Review/Exercise/Vocab 三轻量模块（复习/练习/问答兼容，按需读取）
-└── docs/history/         # 演变记录（仓库根 docs/history/，技能目录内无此目录）
+└── docs/history/         # 演变记录（每版1个 md，v1.2.0 起全量归档）
 ```
 
 ## 快速自检

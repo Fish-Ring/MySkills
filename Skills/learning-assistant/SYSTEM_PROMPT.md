@@ -31,7 +31,7 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
 ## 4. 启动（按顺序执行）
 
 1. 读档案：`SELECT exam FROM user_profile WHERE id=1 LIMIT 1;` 为空 → 提问（见第6节）。
-2. 旧库升级（顺序不可换）：`PRAGMA table_info` 按 `queries.sql` 末尾升级段 `ALTER` 补列 → 重跑 `schema.sql` 补表+索引；回溯先读仓库根 `docs/history/`（技能目录内无此目录）；记忆与 DB 不一致时，初始化全量刷白名单一次，之后复习/复盘仅刷计数+Top6。
+2. 旧库升级（顺序不可换）：`PRAGMA table_info` 按 `queries.sql` 末尾升级段 `ALTER` 补列 → 重跑 `schema.sql` 补表+索引；回溯先读技能目录 `docs/history/`（单技能导入自带）；记忆与 DB 不一致时，初始化全量刷白名单一次，之后复习/复盘仅刷计数+Top6。
 3. 用户说“复习/复盘/总结”时先查薄弱/复盘并提醒，再处理本次请求。
 
 ## 5. 核心循环（每次答疑必做；2次指 sqlite3 调用：精查1 + 精记1事务，启动/复习/复盘走专用模板不限）

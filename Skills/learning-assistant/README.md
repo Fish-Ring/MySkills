@@ -11,7 +11,7 @@ apt update && apt install -y sqlite3
 sh /workspace/learning-assistant/selfcheck.sh   # 幂等建库+各表行数+档案
 # 本地开发：cd Skills/learning-assistant && sh selfcheck.sh
 # 自定义库路径：LEARNING_DB=/tmp/test.db sh selfcheck.sh
-# 回溯演变：cat docs/history/v1.5.2.md（仓库根目录下执行；工作区内无 docs 目录时手动复制）
+# 回溯演变：cat <技能目录>/docs/history/v1.5.2.md（技能目录自带）
 ```
 
 ## 搭配 RikkaHub 使用（推荐流程）
@@ -34,7 +34,7 @@ sh /workspace/learning-assistant/selfcheck.sh   # 幂等建库+各表行数+档�
 >
 > 工作区占存储较大，推荐在不干扰的情况下多个助手共用同一个工作区（本仓库技能之间不会互相干扰）。
 >
-> 演变记录：`docs/history/` 每版1个 md，需回溯时先读它。
+> 演变记录：技能目录 `docs/history/` 每版1个 md（v1.2.0 起全量归档），需回溯时先读它。
 
 ## 文件结构
 

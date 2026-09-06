@@ -27,6 +27,7 @@ english-learning-assistant/
 ├── README.md             # 使用说明
 ├── selfcheck.sh          # 环境自检脚本（sh selfcheck.sh）
 ├── package.json          # 元信息（无依赖）
+├── docs/history/         # 演变记录（v2.3.0 起每版1个 md）
 ├── schemas/
 │   ├── schema.sql        # 表结构（幂等，可重复执行）
 │   ├── queries.sql       # 全部业务 SQL 模板

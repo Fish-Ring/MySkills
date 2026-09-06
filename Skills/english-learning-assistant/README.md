@@ -33,7 +33,7 @@ sh /workspace/english-learning-assistant/selfcheck.sh
 >
 > 工作区占存储较大，推荐在不干扰的情况下多个助手共用同一个工作区（本仓库技能之间不会互相干扰）。
 >
-> 演变记录：`docs/history/` 每版1个 md，需回溯时先读它。
+> 演变记录：技能目录 `docs/history/` 每版1个 md（v2.3.0 起全量归档），需回溯时先读它。
 
 ## 文件结构
 
