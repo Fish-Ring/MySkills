@@ -1,5 +1,6 @@
--- 通用学习助手 v1.4.4 - 数据库模式（全幂等，可重复执行）
+-- 通用学习助手 v1.5.1 - 数据库模式（全幂等，可重复执行）
 -- 初始化：sqlite3 /workspace/learning-assistant/learner.db < schemas/schema.sql
+-- v1.5.0 新增三实体分立：progress=Mastery长期状态 / misconceptions=可复用认知模式 / mistakes=单次错误事件
 
 CREATE TABLE IF NOT EXISTS subjects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,11 +33,24 @@ CREATE TABLE IF NOT EXISTS questions (
     answer_digest TEXT DEFAULT '',         -- 解答要点摘要（复习用）
     technique TEXT DEFAULT '',             -- 关联的通用答题技巧
     tags TEXT DEFAULT '',                  -- 专业名词标签（1主加最多5细分，自由决定，如"矩阵,行列式,特征值"）
+    source TEXT DEFAULT '',                -- 出处：真题/模拟/教材（出题加权用）
+    difficulty INTEGER DEFAULT 3,          -- 难度 1-5（出题加权用）
     times_asked INTEGER DEFAULT 1,         -- 重复提问自动 +1，不重复插入
     last_asked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (subject_id) REFERENCES subjects(id),
     FOREIGN KEY (topic_id) REFERENCES topics(id)
+);
+
+-- 题目-知识点 M:N（副知识点关联，主知识点仍走 questions.topic_id，旧查询兼容）
+CREATE TABLE IF NOT EXISTS question_topics (
+    question_id INTEGER NOT NULL,
+    topic_id INTEGER NOT NULL,
+    weight REAL DEFAULT 1.0,              -- 关联权重
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (question_id, topic_id),
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+    FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS mistakes (
@@ -53,13 +67,50 @@ CREATE TABLE IF NOT EXISTS mistakes (
     UNIQUE(topic_id, question, wrong_answer, correct_answer)
 );
 
+-- Mastery：知识点的长期状态（只存状态不存事件；事件走 mistakes/history_logs）
 CREATE TABLE IF NOT EXISTS progress (
     topic_id INTEGER PRIMARY KEY,
     correct_count INTEGER DEFAULT 0,
     wrong_count INTEGER DEFAULT 0,
+    consecutive_correct INTEGER DEFAULT 0, -- 连对次数（答错清零；score 加成用）
+    mastery_score REAL DEFAULT 0.0,        -- 0-100：100*(cc+连击加成)/(cc+wc)，见 queries.sql 派生规则
+    status TEXT DEFAULT 'learning',        -- learning/familiar/mastered/weak（派生规则见 queries.sql）
     last_practice_at TIMESTAMP,
-    mastery_level REAL DEFAULT 0.0,
+    mastery_level REAL DEFAULT 0.0,        -- 旧列保留兼容，以 mastery_score/status 为准
     FOREIGN KEY (topic_id) REFERENCES topics(id)
+);
+
+-- Misconception：可复用的认知错误模式（跨知识点/跨题复用；单次错误走 mistakes）
+CREATE TABLE IF NOT EXISTS misconceptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,                   -- 错误名称（如"把条件概率当联合概率"）
+    type TEXT DEFAULT 'concept',           -- concept/formula/calculation/thinking/careless
+    description TEXT DEFAULT '',           -- 错误描述
+    occurrence_count INTEGER DEFAULT 1,    -- 出现次数（复用时+1）
+    resolved INTEGER DEFAULT 0,            -- 是否已纠正
+    confidence REAL DEFAULT 0.5,          -- 判断可信度 0-1
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(title, type)
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_misconception (
+    topic_id INTEGER NOT NULL,
+    misconception_id INTEGER NOT NULL,
+    severity INTEGER DEFAULT 3,            -- 严重程度 1-5
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (topic_id, misconception_id),
+    FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE,
+    FOREIGN KEY (misconception_id) REFERENCES misconceptions(id) ON DELETE CASCADE
+);
+
+-- Mistake↔Misconception M:N（一道错题可挂多个认知错误；错误事件本体仍是 mistakes 表）
+CREATE TABLE IF NOT EXISTS mistake_misconceptions (
+    mistake_id INTEGER NOT NULL,
+    misconception_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (mistake_id, misconception_id),
+    FOREIGN KEY (mistake_id) REFERENCES mistakes(id) ON DELETE CASCADE,
+    FOREIGN KEY (misconception_id) REFERENCES misconceptions(id) ON DELETE CASCADE
 );
 
 -- 已废弃：通用技能不再使用艾宾浩斯队列（仅 english-learning-assistant 背词保留），兼容保留不写入
@@ -122,19 +173,32 @@ CREATE TABLE IF NOT EXISTS history_logs (
 
 INSERT OR IGNORE INTO user_profile (id) VALUES (1);
 
-CREATE INDEX IF NOT EXISTS idx_topics_subject ON topics(subject_id);
+-- v1.5.1 索引瘦身：M:N 表的 PRIMARY KEY 自带 (a,b) 索引，只需补反向 (b) 索引；
+-- idx_topics_subject 被 (subject_id,id) 覆盖；review_queue 已废弃，索引一并退役
+DROP INDEX IF EXISTS idx_technique_topics_technique;
+DROP INDEX IF EXISTS idx_technique_questions_technique;
+DROP INDEX IF EXISTS idx_knowledge_mis_mis;
+DROP INDEX IF EXISTS idx_mistake_mis_mis;
+DROP INDEX IF EXISTS idx_question_topics_question;
+DROP INDEX IF EXISTS idx_topics_subject;
+DROP INDEX IF EXISTS idx_review_queue_due;
+-- techniques 通用行 primary_subject_id 为 NULL，UNIQUE 对 NULL 不生效，补表达式唯一索引防重
+CREATE UNIQUE INDEX IF NOT EXISTS idx_techniques_name_subject ON techniques(name, COALESCE(primary_subject_id,-1));
+
 CREATE INDEX IF NOT EXISTS idx_topics_subject_id ON topics(subject_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_techniques_primary_subject ON techniques(primary_subject_id);
 CREATE INDEX IF NOT EXISTS idx_techniques_name ON techniques(name);
 CREATE INDEX IF NOT EXISTS idx_technique_topics_topic ON technique_topics(topic_id);
-CREATE INDEX IF NOT EXISTS idx_technique_topics_technique ON technique_topics(technique_id);
 CREATE INDEX IF NOT EXISTS idx_technique_questions_question ON technique_questions(question_id);
-CREATE INDEX IF NOT EXISTS idx_technique_questions_technique ON technique_questions(technique_id);
+CREATE INDEX IF NOT EXISTS idx_misconceptions_type ON misconceptions(type);
+CREATE INDEX IF NOT EXISTS idx_knowledge_mis_topic ON knowledge_misconception(topic_id);
+CREATE INDEX IF NOT EXISTS idx_mistake_mis_mistake ON mistake_misconceptions(mistake_id);
+CREATE INDEX IF NOT EXISTS idx_question_topics_topic ON question_topics(topic_id);
+CREATE INDEX IF NOT EXISTS idx_progress_status ON progress(status);
 CREATE INDEX IF NOT EXISTS idx_questions_subject_topic ON questions(subject_id, topic_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_mistakes_topic ON mistakes(topic_id);
 CREATE INDEX IF NOT EXISTS idx_mistakes_count ON mistakes(mistake_count DESC);
 CREATE INDEX IF NOT EXISTS idx_progress_mastery ON progress(mastery_level ASC);
-CREATE INDEX IF NOT EXISTS idx_review_queue_due ON review_queue(next_review_at ASC, is_reviewed ASC);
 CREATE INDEX IF NOT EXISTS idx_questions_topic ON questions(topic_id);
 CREATE INDEX IF NOT EXISTS idx_questions_last ON questions(last_asked_at DESC);
 CREATE INDEX IF NOT EXISTS idx_history_date ON history_logs(date);

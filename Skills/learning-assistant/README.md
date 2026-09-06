@@ -1,6 +1,6 @@
-# Learning Assistant (通用学习助手) v1.4.4
+# Learning Assistant (通用学习助手) v1.5.1
 
-预答→精查薄弱点，2次查库封顶；技巧AND门控+每日复盘。**零 Node/npm 依赖**，只需 sqlite3。
+预答→精查薄弱点，2次查库封顶；三实体分立（Mastery/Misconception/Mistake）+ 出题加权。**零 Node/npm 依赖**，只需 sqlite3。
 
 ## 快速开始
 
@@ -11,7 +11,7 @@ apt install -y sqlite3
 sh /workspace/learning-assistant/selfcheck.sh   # 幂等建库+各表行数+档案
 # 本地开发：cd Skills/learning-assistant && sh selfcheck.sh
 # 自定义库路径：LEARNING_DB=/tmp/test.db sh selfcheck.sh
-# 回溯演变：cat /workspace/docs/history/v1.4.4.md
+# 回溯演变：cat /workspace/docs/history/v1.5.1.md
 ```
 
 ## 搭配 RikkaHub 使用（推荐流程）
@@ -58,9 +58,11 @@ learning-assistant/
 |------|------|
 | 绑定 | 已绑定 learning-assistant，禁止脱离技能空答，不写库视为未完成 |
 | 问答 | 预答草拟2-3个要点 → 批量 IN 精查薄弱点（含技巧感知）→ 薄弱点感知作答 |
-| 记录 | 问即疑：questions 总是 times_asked+1，progress wrong_count+1；技巧仅 AND门控（跨3题+2-5步+IF-THEN）通过才入库，否则留空 |
+| 记录 | 问即疑：questions 总是 times_asked+1，progress wrong_count+1（连击清零）；错题判型入 misconceptions + 双M:N，同事务重算 score/status |
+| 三实体 | progress=Mastery状态 / misconceptions=认知模式（5类）/ mistakes=单次事件，三者不混 |
+| 出题 | 薄弱 `status='weak'` + `mastery_score ASC`，`source/difficulty` 加权（难度适中优先） |
 | 技巧 | 主归属 `primary_subject_id`（NULL=通用）+ `technique_topics` M:N 跨科，AI 自主决定是否多关联，不强制 |
-| 复习 | 仅“复习/总结”时查 progress TopN（可按技巧聚合），不做 Stage 调度 |
+| 复习 | 仅“复习/总结”时查 progress TopN（可按技巧/错误类型聚合），不做 Stage 调度 |
 | 复盘 | 仅“复盘”时触发：今日提问/技巧命中/薄弱Top10（`history_logs` 聚合） |
 | 记忆 | 仅基础信息+DB概况计数+薄弱Top6 名称+掌握度可进 RikkaHub 记忆，其余永不进 |
 

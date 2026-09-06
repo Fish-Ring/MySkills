@@ -16,9 +16,13 @@ topics        知识点。subject_id→subjects.id, name, parent_id(层级),
               keywords(检索别名, DEFAULT ''), tags(1主加最多5细分, DEFAULT ''), exam_weight,
               UNIQUE(subject_id, name)
 questions     提问记录（问答流水线核心）。question TEXT NOT NULL UNIQUE,
-              subject_id, topic_id, answer_digest, technique(≤12字技巧名), tags, times_asked, last_asked_at
-mistakes      错题。topic_id, question, wrong_answer, correct_answer, explanation, mistake_count, UNIQUE(topic_id, question, wrong_answer, correct_answer)
-progress      掌握度。topic_id PRIMARY KEY, correct_count, wrong_count, last_practice_at, mastery_level
+              subject_id, topic_id, answer_digest, technique(≤12字技巧名), tags, source(真题/模拟/教材), difficulty(1-5), times_asked, last_asked_at
+question_topics 题目-副知识点 M:N。PRIMARY KEY(question_id, topic_id), weight；主知识点仍走 questions.topic_id
+mistakes      错题事件（单次错误）。topic_id, question, wrong_answer, correct_answer, explanation, mistake_count, UNIQUE(topic_id, question, wrong_answer, correct_answer)
+progress      Mastery长期状态。topic_id PRIMARY KEY, correct/wrong_count, consecutive_correct, mastery_score(0-100), status(learning/familiar/mastered/weak), last_practice_at；mastery_level 旧列保留兼容
+misconceptions 认知错误模式（可复用）。title+type(concept/formula/calculation/thinking/careless) UNIQUE, description, occurrence_count, resolved, confidence
+knowledge_misconception 知识点-错误 M:N。PRIMARY KEY(topic_id, misconception_id), severity 1-5
+mistake_misconceptions 错题-错误 M:N。PRIMARY KEY(mistake_id, misconception_id)
 review_queue  已废弃（兼容保留不写入）。通用技能不再使用艾宾浩斯队列，仅 english-learning-assistant 背词保留
 history_logs  学习日志。date(YYYY-MM-DD), type, count, UNIQUE(date, type)；type ∈ qa/mistake/review/exercise
 user_profile  用户档案。exam, stage, exam_date；建库时种子行 id=1
@@ -36,21 +40,22 @@ technique_questions 技巧-问题 M:N。PRIMARY KEY(technique_id, question_id)
 | 提问入库 | questions 按 question upsert：命中则 times_asked+1 并更新 last_asked_at |
 | 仅提问 | 只累计 times_asked，progress wrong_count+1（问即疑），技巧AND门控不通过则 technique='' |
 | 技巧入库 | AND门控：跨3异构题复用 +2-5步动词化 +IF-THEN含主标签，缺一不入；查重 `lower(trim)`/别名/tag交集 LIMIT 5 命中则合并不新建；跨科由 AI 自主决定多关联 technique_topics |
-| 做错/不会 | progress.wrong_count+1 → mistakes → mistake 日志 |
-| 自评已懂 | progress.correct_count+1 → exercise 日志 |
+| 做错/不会 | progress.wrong_count+1（连击清零）→ mistakes → 判型 misconceptions → 双M:N关联 → 同一事务重算 mastery_score/status → mistake 日志 |
+| 自评已懂 | progress.correct_count+1（连击+1）→ 重算 mastery_score/status → exercise 日志 |
 | 复习/复盘 | 仅用户说“复习/总结/复盘”时触发：查 progress TopN（可按技巧聚合）+ history_logs 今日/7日 + 每日复盘模板，不写 review_queue |
 
-## 薄弱点判定口径
+## 薄弱点判定口径（v1.5.0：status/score 为准）
 
 ```sql
-WHERE p.wrong_count > p.correct_count
-ORDER BY p.mastery_level ASC
+WHERE p.status='weak' ORDER BY p.mastery_score ASC
+-- 兼容口径：WHERE p.wrong_count > p.correct_count ORDER BY p.mastery_level ASC
 -- 按技巧聚合：SELECT k.name, COUNT(*) FROM technique_topics tt JOIN techniques k ... GROUP BY k.id ORDER BY COUNT DESC
+-- 按错误类型聚合：SELECT type, SUM(occurrence_count) FROM misconceptions GROUP BY type ORDER BY 2 DESC
 ```
 
 ## 索引
 
-idx_topics_subject、idx_techniques_primary_subject、idx_techniques_name、idx_technique_topics_topic/technique、idx_technique_questions_question/technique、idx_questions_topic、idx_questions_last、idx_mistakes_topic、idx_progress_mastery、idx_review_queue_due、idx_history_date——完整定义见 schema.sql。
+idx_topics_subject_id、idx_techniques_primary_subject/name（+表达式唯一 idx_techniques_name_subject 防 NULL 通用重名）、idx_technique_topics_topic、idx_technique_questions_question、idx_questions_subject_topic/topic/last、idx_mistakes_topic/count、idx_progress_mastery/status、idx_misconceptions_type、idx_knowledge_mis_topic、idx_mistake_mis_mistake、idx_question_topics_topic、idx_history_date——v1.5.1 已删7冗余（M:N 主键自带正向索引、topics 单列被复合覆盖、review_queue 废弃），完整定义见 schema.sql。
 
 ## 记忆白名单
 

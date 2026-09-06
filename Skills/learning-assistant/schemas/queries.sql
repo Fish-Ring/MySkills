@@ -1,12 +1,15 @@
--- 通用学习助手 v1.4.4 - 常用 SQL 模板（分页+统计+tag专业名词+技巧）
--- 用法：sqlite3 -json <技能目录>/learner.db "<语句>"
--- 约定：' 拼入前写成 ''；先查重→相似查→自动合并后写入；tag 必须是专业名词（禁止句子），1主加最多5细分，自由决定
+-- 通用学习助手 v1.5.1 - 常用 SQL 模板（分页+统计+tag专业名词+技巧+三实体）
+-- 用法：sqlite3 -json <技能目录>/learner.db "<语句>"；写入一律 heredoc 内联事务，禁落文件
+-- 约定：中文文本里的撇号一律用 ′(U+2032)，禁英文 '；SQL 内英文引号写成 ''；先查重→相似查→自动合并后写入；tag 必须是专业名词（禁止句子），1主加最多5细分，自由决定
+-- 三实体：progress=Mastery长期状态 / misconceptions=可复用认知模式 / mistakes=单次错误事件，三者不混
 
 -- ============ 查重（INSERT 前必跑，LIMIT 1） ============
 SELECT id FROM subjects WHERE name='科目名' LIMIT 1;
 SELECT id, tags FROM topics WHERE subject_id=科目ID AND name='知识点' LIMIT 1;
 SELECT id, times_asked, tags FROM questions WHERE question='问题原文' LIMIT 1;
 SELECT id FROM mistakes WHERE topic_id=知识点ID AND question='题目' AND COALESCE(wrong_answer,'')=COALESCE('错答','') LIMIT 1;
+SELECT id, type FROM misconceptions WHERE lower(trim(title))=lower(trim('错误名')) AND type='concept' LIMIT 1;
+SELECT question_id, topic_id FROM question_topics WHERE question_id=问题ID AND topic_id=副知识点ID LIMIT 1;
 SELECT id, primary_subject_id FROM techniques WHERE name='技巧名' AND COALESCE(primary_subject_id,-1)=COALESCE(科目ID,-1) LIMIT 1;
 
 -- ============ 相似自动合并（查不到精确时跑，命中则合并不新建） ============
@@ -26,10 +29,22 @@ LIMIT 5;
 -- ============ 写入（幂等） ============
 INSERT OR IGNORE INTO subjects (name, full_name) VALUES ('数学二','考研数学二');
 INSERT OR IGNORE INTO topics (subject_id, name, keywords, tags) VALUES (科目ID,'知识点','别名','主标签,细分1,细分2');
-INSERT INTO questions (subject_id, topic_id, question, answer_digest, technique, tags) VALUES (科目ID,知识点ID,'问题','要点','技巧名','主标签,细分1') ON CONFLICT(question) DO UPDATE SET times_asked=times_asked+1, last_asked_at=CURRENT_TIMESTAMP, tags=CASE WHEN (','||COALESCE(tags,'')||',') LIKE '%,主标签,%' THEN tags ELSE COALESCE(tags,'')||',主标签' END;
+INSERT INTO questions (subject_id, topic_id, question, answer_digest, technique, tags, source, difficulty) VALUES (科目ID,知识点ID,'问题','要点','技巧名','主标签,细分1','真题',3) ON CONFLICT(question) DO UPDATE SET times_asked=times_asked+1, last_asked_at=CURRENT_TIMESTAMP, tags=CASE WHEN (','||COALESCE(tags,'')||',') LIKE '%,主标签,%' THEN tags ELSE COALESCE(tags,'')||',主标签' END;
 INSERT OR IGNORE INTO mistakes (topic_id, question, wrong_answer, correct_answer, explanation) VALUES (知识点ID,'题','错','对','析');
 INSERT INTO progress (topic_id, correct_count, wrong_count, last_practice_at) VALUES (知识点ID,0,1,CURRENT_TIMESTAMP) ON CONFLICT(topic_id) DO UPDATE SET wrong_count=wrong_count+1, last_practice_at=CURRENT_TIMESTAMP;
 INSERT INTO progress (topic_id, correct_count, wrong_count, last_practice_at) VALUES (知识点ID,1,0,CURRENT_TIMESTAMP) ON CONFLICT(topic_id) DO UPDATE SET correct_count=correct_count+1, last_practice_at=CURRENT_TIMESTAMP;
+-- Misconception 写入（错题判型后执行；复用时 occurrence_count+1；severity 1-5）
+INSERT INTO misconceptions (title, type, description, confidence) VALUES ('错误名','concept','描述',0.7) ON CONFLICT(title,type) DO UPDATE SET occurrence_count=occurrence_count+1;
+INSERT OR IGNORE INTO knowledge_misconception (topic_id, misconception_id, severity) VALUES (知识点ID,错误模式ID,4);
+INSERT OR IGNORE INTO mistake_misconceptions (mistake_id, misconception_id) VALUES (错题ID,错误模式ID);
+-- 副知识点关联（一道题多个知识点时，主知识点仍走 questions.topic_id）
+INSERT OR IGNORE INTO question_topics (question_id, topic_id, weight) VALUES (问题ID,副知识点ID,0.8);
+-- 取刚写入行的 id（先查重→无则 INSERT→再 SELECT；不用 RETURNING，照顾旧版 sqlite3）：
+-- SELECT id FROM misconceptions WHERE lower(trim(title))=lower(trim('错误名')) AND type='concept' LIMIT 1;
+-- Mastery 重算（同一事务内执行：答错连击清零，答对连击+1；score=100*(cc+连击加成)/(cc+wc)；status 派生）
+-- 答错：UPDATE progress SET wrong_count=wrong_count+1, consecutive_correct=0, last_practice_at=CURRENT_TIMESTAMP WHERE topic_id=知识点ID;
+-- 答对：UPDATE progress SET correct_count=correct_count+1, consecutive_correct=consecutive_correct+1, last_practice_at=CURRENT_TIMESTAMP WHERE topic_id=知识点ID;
+-- 重算：UPDATE progress SET mastery_score=ROUND(100.0*(correct_count+MIN(consecutive_correct,5))/(correct_count+wrong_count+MIN(consecutive_correct,5)),1), status=CASE WHEN wrong_count>correct_count THEN 'weak' WHEN correct_count>=3 AND 1.0*correct_count/(correct_count+wrong_count)>=0.8 THEN 'mastered' WHEN correct_count>0 THEN 'familiar' ELSE 'learning' END WHERE topic_id=知识点ID;
 -- 技巧写入（AND门控通过后才执行；跨科由 AI 自主决定多关联一行 technique_topics）
 INSERT OR IGNORE INTO techniques (name, primary_subject_id, description, keywords, tags) VALUES ('技巧名',科目ID,'IF触发条件 THEN 2-5步','别名','主标签,细分1');
 UPDATE techniques SET keywords=CASE WHEN (','||COALESCE(keywords,'')||',') NOT LIKE '%,新别名,%' THEN COALESCE(keywords,'')||',新别名' ELSE keywords END, tags=CASE WHEN (','||COALESCE(tags,'')||',') NOT LIKE '%,主标签,%' THEN COALESCE(tags,'')||',主标签' ELSE tags END WHERE id=命中ID;
@@ -37,7 +52,7 @@ INSERT OR IGNORE INTO technique_topics (technique_id, topic_id) VALUES (技巧ID
 INSERT OR IGNORE INTO technique_questions (technique_id, question_id) VALUES (技巧ID,问题ID);
 
 -- ============ 核心检索：预答→精查薄弱点（tag-aware，IN 2-3 要点 + tag 兜底） ============
-SELECT t.name, t.tags, COALESCE(p.wrong_count,0) wc, COALESCE(p.correct_count,0) cc
+SELECT t.name, t.tags, COALESCE(p.wrong_count,0) wc, COALESCE(p.status,'learning') st, COALESCE(p.mastery_score,0) score
 FROM topics t LEFT JOIN progress p ON p.topic_id=t.id
 WHERE t.subject_id=(SELECT id FROM subjects WHERE name='判定的科目' LIMIT 1)
   AND (t.name IN ('要点1','要点2') OR (','||COALESCE(t.tags,'')||',') LIKE '%,主标签,%');
@@ -56,14 +71,21 @@ SELECT id, name, tags FROM techniques WHERE COALESCE(primary_subject_id,-1)=COAL
 
 -- ============ 统计总览 + 薄弱综合 ============
 SELECT (SELECT COUNT(*) FROM questions) qs, (SELECT COUNT(*) FROM topics) tps, (SELECT COUNT(*) FROM progress) tracked, (SELECT COUNT(*) FROM mistakes) ms, (SELECT COUNT(*) FROM subjects) subs, (SELECT COUNT(*) FROM techniques) tcs;
+-- 兼容口径（旧 status 未回填时用）：
 SELECT t.name, s.name subject, t.tags, p.wrong_count, p.correct_count, ROUND(COALESCE(p.mastery_level,0),2) m, (julianday('now')-julianday(p.last_practice_at)) d FROM progress p JOIN topics t ON t.id=p.topic_id JOIN subjects s ON s.id=t.subject_id WHERE p.wrong_count>0 ORDER BY p.wrong_count DESC, d DESC LIMIT 10;
 SELECT k.name, s.name subject, k.tags, COUNT(DISTINCT tt.topic_id) topics, COUNT(DISTINCT tq.question_id) qs FROM techniques k LEFT JOIN technique_topics tt ON tt.technique_id=k.id LEFT JOIN technique_questions tq ON tq.technique_id=k.id LEFT JOIN subjects s ON s.id=k.primary_subject_id GROUP BY k.id ORDER BY qs DESC LIMIT 10;
 SELECT type, SUM(count) n FROM history_logs WHERE date=date('now','localtime') GROUP BY type;
 SELECT type, SUM(count) n FROM history_logs WHERE date>=date('now','-7 days','localtime') GROUP BY type;
 
 -- ============ 轻量复习 + 每日复盘（仅用户说复习/总结/薄弱点/复盘时） ============
--- 薄弱Top（按技巧聚合可选）
+-- 薄弱Top（按技巧聚合可选；v1.5.0 优先用 status/score）
+SELECT t.name, s.name subject, t.tags, p.status, p.mastery_score, p.wrong_count FROM progress p JOIN topics t ON t.id=p.topic_id JOIN subjects s ON s.id=t.subject_id WHERE p.status='weak' ORDER BY p.mastery_score ASC LIMIT 5;
 SELECT t.name, s.name subject, t.tags, p.wrong_count, ROUND(COALESCE(p.mastery_level,0),2) m FROM progress p JOIN topics t ON t.id=p.topic_id JOIN subjects s ON s.id=t.subject_id WHERE p.wrong_count > p.correct_count ORDER BY m ASC LIMIT 5;
+-- 认知错误聚合（哪类错最多 + 未解决优先）
+SELECT type, SUM(occurrence_count) n, SUM(CASE WHEN resolved=0 THEN 1 ELSE 0 END) open FROM misconceptions GROUP BY type ORDER BY n DESC;
+SELECT mc.title, mc.type, km.severity, mc.occurrence_count FROM knowledge_misconception km JOIN misconceptions mc ON mc.id=km.misconception_id JOIN topics t ON t.id=km.topic_id WHERE t.subject_id=科目ID AND mc.resolved=0 ORDER BY km.severity DESC, mc.occurrence_count DESC LIMIT 10;
+-- 副知识点反查（一题多知识点）
+SELECT t.name FROM question_topics qt JOIN topics t ON t.id=qt.topic_id WHERE qt.question_id=问题ID ORDER BY qt.weight DESC;
 -- 每日复盘（用户主动发起）
 SELECT date, type, SUM(count) n FROM history_logs WHERE date=date('now','localtime') GROUP BY type;
 SELECT question, technique, tags, times_asked FROM questions WHERE date(last_asked_at)=date('now','localtime') ORDER BY id DESC LIMIT 20 OFFSET 0;
@@ -78,8 +100,18 @@ INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'mist
 -- SELECT lower(trim(name)), COUNT(*) c FROM topics GROUP BY 1 HAVING c>1 LIMIT 20;
 -- SELECT lower(trim(name)), primary_subject_id, COUNT(*) c FROM techniques GROUP BY 1,2 HAVING c>1 LIMIT 20;
 
--- ============ 旧库升级 ============
+-- ============ 旧库升级（v1.5.0/v1.5.1：顺序不可换——先 ALTER 补列，再重跑 schema.sql 补新表+索引） ============
+-- v1.5.1 索引瘦身（删7冗余+补 techniques 表达式唯一索引）重跑即生效，无需手动操作
+-- 顺序原因：schema.sql 末尾索引引用新列，先重跑会报 no such column 中断，后续新表建不上
 -- PRAGMA table_info(topics); 无 keywords 则 ALTER TABLE topics ADD COLUMN keywords TEXT DEFAULT '';
 -- PRAGMA table_info(topics); 无 tags 则 ALTER TABLE topics ADD COLUMN tags TEXT DEFAULT '';
 -- PRAGMA table_info(questions); 无 tags 则 ALTER TABLE questions ADD COLUMN tags TEXT DEFAULT '';
+-- PRAGMA table_info(questions); 无 source 则 ALTER TABLE questions ADD COLUMN source TEXT DEFAULT '';
+-- PRAGMA table_info(questions); 无 difficulty 则 ALTER TABLE questions ADD COLUMN difficulty INTEGER DEFAULT 3;
+-- PRAGMA table_info(progress); 无 consecutive_correct 则 ALTER TABLE progress ADD COLUMN consecutive_correct INTEGER DEFAULT 0;
+-- PRAGMA table_info(progress); 无 mastery_score 则 ALTER TABLE progress ADD COLUMN mastery_score REAL DEFAULT 0.0;
+-- PRAGMA table_info(progress); 无 status 则 ALTER TABLE progress ADD COLUMN status TEXT DEFAULT 'learning';
 -- PRAGMA table_info(techniques); 缺表对照 schema.sql 幂等重跑
+-- 更早旧库（v1.4 前）另需：mistakes.mistake_count、questions.last_asked_at
+-- PRAGMA table_info(mistakes); 无 mistake_count 则 ALTER TABLE mistakes ADD COLUMN mistake_count INTEGER DEFAULT 1;
+-- PRAGMA table_info(questions); 无 last_asked_at 则 ALTER TABLE questions ADD COLUMN last_asked_at TIMESTAMP;（禁 DEFAULT CURRENT_TIMESTAMP，SQLite 不允许 ADD COLUMN 带非常量默认值）
