@@ -1,4 +1,4 @@
--- 通用学习助手 v1.5.2 - 常用 SQL 模板（分页+统计+tag专业名词+技巧+三实体）
+-- 通用学习助手 v1.5.3 - 常用 SQL 模板（分页+统计+tag专业名词+技巧+三实体+见解+合并）
 -- 要求 SQLite ≥3.24（UPSERT）；表达式索引需 ≥3.9（Debian10 默认 3.27 可用，3.24+ 部分可用）
 -- 用法：sqlite3 -json <技能目录>/learner.db "<语句>"；写入一律 heredoc 内联事务，禁落文件
 -- 约定：中文文本里的撇号一律用 ′(U+2032)，禁英文 '；SQL 内英文引号写成 ''；先查重→相似查→自动合并后写入；tag 必须是专业名词（禁止句子），1主加最多5细分，自由决定
@@ -107,6 +107,28 @@ SELECT COUNT(DISTINCT technique) c FROM questions WHERE technique!='';
 INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'qa',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
 INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'mistake',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
 
+-- ============ 用户见解（原文照录禁改写；精查已用子查询带回最新1条，此处为写入与补查） ============
+SELECT id FROM insights WHERE topic_id=知识点ID AND content='用户原话' LIMIT 1;
+INSERT INTO insights (topic_id, content) VALUES (知识点ID,'用户原话理解');
+SELECT content FROM insights WHERE topic_id=知识点ID ORDER BY id DESC LIMIT 2;
+
+-- ============ 主动合并（先总结释义写保留行，再转关联，最后删旧行；同一事务） ============
+-- 知识点合并（progress 两行并一行：计数相加，连击取保留行，之后必接 Mastery 重算；M:N 用 UPDATE OR IGNORE 跳过重复关联）
+UPDATE questions SET topic_id=保留ID WHERE topic_id=旧ID;
+UPDATE mistakes SET topic_id=保留ID WHERE topic_id=旧ID;
+UPDATE progress SET correct_count=correct_count+(SELECT correct_count FROM progress WHERE topic_id=旧ID), wrong_count=wrong_count+(SELECT wrong_count FROM progress WHERE topic_id=旧ID) WHERE topic_id=保留ID;
+DELETE FROM progress WHERE topic_id=旧ID;
+UPDATE OR IGNORE question_topics SET topic_id=保留ID WHERE topic_id=旧ID;
+UPDATE OR IGNORE technique_topics SET topic_id=保留ID WHERE topic_id=旧ID;
+UPDATE OR IGNORE knowledge_misconception SET topic_id=保留ID WHERE topic_id=旧ID;
+UPDATE insights SET topic_id=保留ID WHERE topic_id=旧ID;
+DELETE FROM topics WHERE id=旧ID;
+-- 问题合并（times_asked 相加；mistakes 按题干文本关联，无需转）
+UPDATE OR IGNORE technique_questions SET question_id=保留ID WHERE question_id=旧ID;
+UPDATE OR IGNORE question_topics SET question_id=保留ID WHERE question_id=旧ID;
+UPDATE questions SET times_asked=times_asked+(SELECT times_asked FROM questions WHERE id=旧ID) WHERE id=保留ID;
+DELETE FROM questions WHERE id=旧ID;
+
 -- ============ 维护：去重扫描（按需） ============
 -- SELECT lower(trim(name)), COUNT(*) c FROM topics GROUP BY 1 HAVING c>1 LIMIT 20;
 -- SELECT lower(trim(name)), primary_subject_id, COUNT(*) c FROM techniques GROUP BY 1,2 HAVING c>1 LIMIT 20;
@@ -114,7 +136,7 @@ INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'mist
 -- ============ 旧库升级（顺序不可换——先 ALTER 补列，再重跑 schema.sql 补新表+索引） ============
 -- 原因有二：CREATE TABLE IF NOT EXISTS 不补列；末尾索引引用新列，先重跑索引段会报 no such column（新表本身在索引段之前，已建好，不受影响）
 -- v1.5.2 索引调整（删 6 冗余+退役 1 废弃+补 3 表达式）重跑即生效，无需手动操作
--- v1.5.x 新增表清单（缺表即重跑 schema.sql）：techniques/technique_topics/technique_questions/misconceptions/knowledge_misconception/mistake_misconceptions/question_topics
+-- v1.5.x 新增表清单（缺表即重跑 schema.sql）：techniques/technique_topics/technique_questions/misconceptions/knowledge_misconception/mistake_misconceptions/question_topics/insights（v1.5.3）
 -- PRAGMA table_info(topics); 无 keywords 则 ALTER TABLE topics ADD COLUMN keywords TEXT DEFAULT '';
 -- PRAGMA table_info(topics); 无 tags 则 ALTER TABLE topics ADD COLUMN tags TEXT DEFAULT '';
 -- PRAGMA table_info(questions); 无 tags 则 ALTER TABLE questions ADD COLUMN tags TEXT DEFAULT '';

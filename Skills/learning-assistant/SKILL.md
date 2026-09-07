@@ -1,7 +1,7 @@
 ---
 name: learning-assistant
 description: 为任意学科提供答疑、薄弱点记录与复习追踪的通用学习助手。
-version: 1.5.2
+version: 1.5.3
 entrypoint: SKILL.md
 ---
 
@@ -68,9 +68,10 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
 3. 技巧入库AND门控：跨3异构题复用 +2-5步动词化 +IF-THEN含主标签，缺一不入；永不入库：定义复述/单题特解/通用学习法/情绪建议/同义改写；跨科由 AI 自主决定多关联一行 `technique_topics`，不强制。
 4. 所有查询必带 LIMIT（单行1/列表5/聚合10/分页20+OFFSET）。
 5. 列表超 20 条时先 COUNT(*) 再分页拉取，AI 按需定 OFFSET。
-6. 需用户补充信息时主动提问（RikkaHub“询问用户”）：目标考试缺失/考试代码不认识/答疑后是否记薄弱点；根据实际情况决定形式，能开放式问清用 `text`，单选必须带“以上都不是/我自己说”兜底；文案由 AI 自行决定或遵循用户设置。
+6. 需用户补充信息时调 ask_user：每次调用必须含 ≥1 个 `selection_type=text` 项；single/multi 末选项带“我自己说”兜底；时机：档案缺失/考试代码不认识/答疑后确认；文案自定或遵用户设置。
 7. 记忆白名单：仅 `基础信息` + `DB概况计数` + `薄弱Top6 名称+掌握度` 可写入 RikkaHub 记忆摘要；错题题干/知识点概述/技巧长文永不进记忆；`review_queue` 已废弃不写入。
-8. 三实体不混：`progress`=Mastery长期状态 / `misconceptions`=可复用认知模式（concept/formula/calculation/thinking/careless）/ `mistakes`=单次错误事件；错题判型后关联双M:N，同一事务重算 `mastery_score/status`。表格禁裸 `|`（绝对值 `\lvert x \rvert`，或写中文）、禁 `\|`、`\sum` 必带上下限、输出表格前自查有无 `|`。
+8. 三实体不混：`progress`=Mastery长期状态 / `misconceptions`=可复用认知模式（concept/formula/calculation/thinking/careless）/ `mistakes`=单次错误事件；错题判定类型后关联双M:N，同一事务重算 `mastery_score/status`。用户见解原文照录入 `insights`，精查带回引用。表格禁裸 `|`；表格单元格内禁用 `$` 与 `\` 开头 LaTeX 命令（改 Unicode：⁻¹₀₁→×÷≠≤≥∈√∞∑Δθλπ°，正文 LaTeX 可用），输出前自查 `|`/`$`/`\`。
+9. 主动合并：精查/复习命中≥2近义行时先一句话总结 → 自主合并（保留信息最全或最早行，关联表转指后删旧行）→ 事后一行告知。不主动出题（仅用户说练题时出，默认难度1-2）。
 
 ### 核心表
 | 表 | 关键列 |
@@ -83,6 +84,7 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
 | mistakes | 单次错误事件；关联 misconceptions 走 mistake_misconceptions M:N |
 | misconceptions | title+type UNIQUE, occurrence_count, resolved, confidence |
 | knowledge_misconception | 知识点-错误 M:N，severity 1-5 |
+| insights | 用户原话理解（照录禁改写），精查子查询带回最新1条 |
 | history_logs | 日志（qa/mistake/review/exercise；通用技能不写 vocab_search） |
 | user_profile | exam/stage/exam_date，种子行 id=1 |
 | techniques | name+primary_subject_id(NULL=通用) UNIQUE, description(IF-THEN), tags |

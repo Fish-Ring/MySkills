@@ -1,4 +1,4 @@
--- 通用学习助手 v1.5.2 - 数据库模式（全幂等，可重复执行）
+-- 通用学习助手 v1.5.3 - 数据库模式（全幂等，可重复执行）
 -- 初始化：sqlite3 /workspace/learning-assistant/learner.db < schemas/schema.sql
 -- v1.5.0 新增三实体分立：progress=Mastery长期状态 / misconceptions=可复用认知模式 / mistakes=单次错误事件
 
@@ -155,6 +155,15 @@ CREATE TABLE IF NOT EXISTS technique_questions (
     FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
 );
 
+-- 用户见解：用户本人对知识点的原话理解（照录禁改写；精查带回引用）
+CREATE TABLE IF NOT EXISTS insights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS user_profile (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     exam TEXT DEFAULT '',
@@ -208,3 +217,4 @@ CREATE INDEX IF NOT EXISTS idx_questions_subject_topic ON questions(subject_id, 
 CREATE INDEX IF NOT EXISTS idx_mistakes_count ON mistakes(mistake_count DESC);
 CREATE INDEX IF NOT EXISTS idx_questions_topic ON questions(topic_id);
 CREATE INDEX IF NOT EXISTS idx_questions_last ON questions(last_asked_at DESC);
+CREATE INDEX IF NOT EXISTS idx_insights_topic ON insights(topic_id, id DESC);

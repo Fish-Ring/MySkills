@@ -23,6 +23,7 @@ progress      Mastery长期状态。topic_id PRIMARY KEY, correct/wrong_count, c
 misconceptions 认知错误模式（可复用）。title+type(concept/formula/calculation/thinking/careless) UNIQUE, description, occurrence_count, resolved, confidence
 knowledge_misconception 知识点-错误 M:N。PRIMARY KEY(topic_id, misconception_id), severity 1-5
 mistake_misconceptions 错题-错误 M:N。PRIMARY KEY(mistake_id, misconception_id)
+insights      用户见解。topic_id→topics.id, content（原文照录禁改写）；精查子查询带回最新1条引用
 review_queue  已废弃（兼容保留不写入）。通用技能不再使用艾宾浩斯队列，仅 english-learning-assistant 背词保留
 history_logs  学习日志。date(YYYY-MM-DD), type, count, UNIQUE(date, type)；type ∈ qa/mistake/review/exercise（通用技能不写 vocab_search）
 user_profile  用户档案。exam, stage, exam_date；建库时种子行 id=1
@@ -40,7 +41,7 @@ technique_questions 技巧-问题 M:N。PRIMARY KEY(technique_id, question_id)
 | 提问入库 | questions 按 question upsert：命中则 times_asked+1 并更新 last_asked_at |
 | 仅提问 | 只累计 times_asked，progress wrong_count+1（问即疑），技巧AND门控不通过则 technique='' |
 | 技巧入库 | AND门控：跨3异构题复用 +2-5步动词化 +IF-THEN含主标签，缺一不入；查重 `lower(trim)`/别名/tag交集 LIMIT 5 命中则合并不新建；跨科由 AI 自主决定多关联 technique_topics |
-| 做错/不会 | progress.wrong_count+1（连击清零）→ mistakes → 判型 misconceptions → 双M:N关联 → 同一事务重算 mastery_score/status → mistake 日志 |
+| 做错/不会 | progress.wrong_count+1（连击清零）→ mistakes → 判定类型入 misconceptions → 双M:N关联 → 同一事务重算 mastery_score/status → mistake 日志 |
 | 自评已懂 | progress.correct_count+1（连击+1）→ 重算 mastery_score/status → exercise 日志 |
 | 复习/复盘 | 仅用户说“复习/总结/复盘”时触发：查 progress TopN（可按技巧聚合）+ history_logs 今日/7日 + 每日复盘模板，不写 review_queue |
 
@@ -53,7 +54,7 @@ WHERE p.status='weak' ORDER BY p.mastery_score ASC
 -- 按错误类型聚合：SELECT type, SUM(occurrence_count) FROM misconceptions GROUP BY type ORDER BY 2 DESC
 ```
 
-## 索引（v1.5.2，共 17 个；删 8 冗余（含退役 1 废弃）+ 补 3 表达式）
+## 索引（v1.5.3，共 18 个；v1.5.2 删 8 冗余（含退役 1 废弃）+ 补 3 表达式；本版 +insights 索引 1 个）
 
 ```
 idx_topics_subject_id             topics(subject_id, id DESC)
@@ -68,6 +69,7 @@ idx_misconceptions_title_nocase   UNIQUE misconceptions(lower(trim(title)), type
 idx_knowledge_mis_mis             knowledge_misconception(misconception_id)
 idx_mistake_mis_mis               mistake_misconceptions(misconception_id)
 idx_question_topics_topic         question_topics(topic_id)
+idx_insights_topic                insights(topic_id, id DESC)（带回最新见解）
 idx_progress_status_score         progress(status, mastery_score)（薄弱 Top5 热点）
 idx_questions_subject_topic       questions(subject_id, topic_id, id DESC)
 idx_mistakes_count                mistakes(mistake_count DESC)（错题本 TopN）
