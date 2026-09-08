@@ -1,4 +1,4 @@
-# Learning Assistant (通用学习助手) v1.5.3
+# Learning Assistant (通用学习助手) v1.5.4
 
 预答→精查薄弱点，2次查库封顶；三实体分立（Mastery/Misconception/Mistake）+ 出题加权。**零 Node/npm 依赖**，只需 sqlite3。
 
@@ -11,7 +11,7 @@ apt update && apt install -y sqlite3
 sh /workspace/learning-assistant/selfcheck.sh   # 幂等建库+各表行数+档案
 # 本地开发：cd Skills/learning-assistant && sh selfcheck.sh
 # 自定义库路径：LEARNING_DB=/tmp/test.db sh selfcheck.sh
-# 回溯演变：cat <技能目录>/docs/history/v1.5.3.md（技能目录自带）
+# 回溯演变：cat <技能目录>/docs/history/v1.5.4.md（技能目录自带）
 ```
 
 ## 搭配 RikkaHub 使用（推荐流程）
@@ -59,7 +59,8 @@ learning-assistant/
 | 绑定 | 已绑定 learning-assistant，禁止脱离技能空答，不写库视为未完成 |
 | 问答 | 预答草拟2-3个要点 → 批量 IN 精查薄弱点（含技巧感知）→ 薄弱点感知作答 |
 | 记录 | 问即疑：questions 总是 times_asked+1，progress wrong_count+1（连击清零）；错题判定类型入 misconceptions + 双M:N，同事务重算 score/status |
-| 见解 | 用户原话理解照录入 insights，精查带回引用（“按你上次的理解…”） |
+| 见解 | 两道门（正确+有价值）才记，疑问不入；精查带回引用（“按你上次的理解…”） |
+| 追问 | 同一问题追问复用上一行（times_asked+1），不新开话题 |
 | 合并 | 命中≥2近义行时先一句话总结 → 自主合并（保留最全/最早行）→ 事后告知 |
 | 三实体 | progress=Mastery状态 / misconceptions=认知模式（5类）/ mistakes=单次事件，三者不混 |
 | 出题 | 仅用户说练题时出，默认难度1-2单知识点；薄弱 `status='weak'` + `mastery_score ASC` |

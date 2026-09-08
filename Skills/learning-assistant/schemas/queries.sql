@@ -1,4 +1,4 @@
--- 通用学习助手 v1.5.3 - 常用 SQL 模板（分页+统计+tag专业名词+技巧+三实体+见解+合并）
+-- 通用学习助手 v1.5.4 - 常用 SQL 模板（分页+统计+tag专业名词+技巧+三实体+见解+合并+追问复用）
 -- 要求 SQLite ≥3.24（UPSERT）；表达式索引需 ≥3.9（Debian10 默认 3.27 可用，3.24+ 部分可用）
 -- 用法：sqlite3 -json <技能目录>/learner.db "<语句>"；写入一律 heredoc 内联事务，禁落文件
 -- 约定：中文文本里的撇号一律用 ′(U+2032)，禁英文 '；SQL 内英文引号写成 ''；先查重→相似查→自动合并后写入；tag 必须是专业名词（禁止句子），1主加最多5细分，自由决定
@@ -48,6 +48,8 @@ INSERT OR IGNORE INTO mistake_misconceptions (mistake_id, misconception_id) VALU
 INSERT OR IGNORE INTO question_topics (question_id, topic_id, weight) VALUES (问题ID,副知识点ID,0.8);
 -- 取刚写入行的 id（先查重→无则 INSERT→再 SELECT；不用 RETURNING，照顾旧版 sqlite3）：
 -- SELECT id FROM misconceptions WHERE lower(trim(title))=lower(trim('错误名')) AND type='concept' LIMIT 1;
+-- 追问复用（文本不同无法 ON CONFLICT 命中，按上一问题 id 直接累加，不新建行）：
+-- UPDATE questions SET times_asked=times_asked+1, last_asked_at=CURRENT_TIMESTAMP WHERE id=上一问题ID;
 -- Mastery 重算（同一事务内执行：答错连击清零，答对连击+1；score=100*(cc+连击加成)/(cc+wc)；status 派生）
 -- 快捷更新（行已存在时用，与上段建行模板互斥；之后必接重算）
 -- 答错：UPDATE progress SET wrong_count=wrong_count+1, consecutive_correct=0, last_practice_at=CURRENT_TIMESTAMP WHERE topic_id=知识点ID;
@@ -107,7 +109,7 @@ SELECT COUNT(DISTINCT technique) c FROM questions WHERE technique!='';
 INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'qa',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
 INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'mistake',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
 
--- ============ 用户见解（原文照录禁改写；精查已用子查询带回最新1条，此处为写入与补查） ============
+-- ============ 用户见解（两道门：正确+有价值才记；疑问句情绪话永不入；原文照录禁改写） ============
 SELECT id FROM insights WHERE topic_id=知识点ID AND content='用户原话' LIMIT 1;
 INSERT INTO insights (topic_id, content) VALUES (知识点ID,'用户原话理解');
 SELECT content FROM insights WHERE topic_id=知识点ID ORDER BY id DESC LIMIT 2;

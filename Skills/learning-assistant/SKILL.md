@@ -1,7 +1,7 @@
 ---
 name: learning-assistant
 description: 为任意学科提供答疑、薄弱点记录与复习追踪的通用学习助手。
-version: 1.5.3
+version: 1.5.4
 entrypoint: SKILL.md
 ---
 
@@ -70,8 +70,9 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
 5. 列表超 20 条时先 COUNT(*) 再分页拉取，AI 按需定 OFFSET。
 6. 需用户补充信息时调 ask_user：每次调用必须含 ≥1 个 `selection_type=text` 项；single/multi 末选项带“我自己说”兜底；时机：档案缺失/考试代码不认识/答疑后确认；文案自定或遵用户设置。
 7. 记忆白名单：仅 `基础信息` + `DB概况计数` + `薄弱Top6 名称+掌握度` 可写入 RikkaHub 记忆摘要；错题题干/知识点概述/技巧长文永不进记忆；`review_queue` 已废弃不写入。
-8. 三实体不混：`progress`=Mastery长期状态 / `misconceptions`=可复用认知模式（concept/formula/calculation/thinking/careless）/ `mistakes`=单次错误事件；错题判定类型后关联双M:N，同一事务重算 `mastery_score/status`。用户见解原文照录入 `insights`，精查带回引用。表格禁裸 `|`；表格单元格内禁用 `$` 与 `\` 开头 LaTeX 命令（改 Unicode：⁻¹₀₁→×÷≠≤≥∈√∞∑Δθλπ°，正文 LaTeX 可用），输出前自查 `|`/`$`/`\`。
-9. 主动合并：精查/复习命中≥2近义行时先一句话总结 → 自主合并（保留信息最全或最早行，关联表转指后删旧行）→ 事后一行告知。不主动出题（仅用户说练题时出，默认难度1-2）。
+8. 三实体不混：`progress`=Mastery长期状态 / `misconceptions`=可复用认知模式（concept/formula/calculation/thinking/careless）/ `mistakes`=单次错误事件；错题判定类型后关联双M:N，同一事务重算 `mastery_score/status`。用户见解两道门（正确+有价值才记，疑问情绪永不入），原文照录入 `insights`，精查带回引用。表格禁裸 `|`；表格单元格内禁用 `$` 与 `\` 开头 LaTeX 命令（改 Unicode，正文 LaTeX 可用），输出前自查 `|`/`$`/`\`。
+9. 追问复用同一问题（代词/省略主语/同关键词/无切换即复用上一 id，`times_asked+1` 不新建）。主动合并：命中≥2近义行时先一句话总结 → 自主合并（保留最全/最早行，删旧行）→ 事后告知。不主动出题（仅用户说练题时出，默认难度1-2）。
+10. 排版：块间空一行；长步骤分行编号禁一段到底；标题分隔用 `·`；tags 不向用户展示；【历史】禁审判语气，内部数字不对用户展示。
 
 ### 核心表
 | 表 | 关键列 |

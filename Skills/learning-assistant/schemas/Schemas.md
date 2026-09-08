@@ -38,7 +38,8 @@ technique_questions 技巧-问题 M:N。PRIMARY KEY(technique_id, question_id)
 
 | 场景 | 行为 |
 |------|------|
-| 提问入库 | questions 按 question upsert：命中则 times_asked+1 并更新 last_asked_at |
+| 提问入库 | questions 按 question upsert：命中则 times_asked+1 并更新 last_asked_at；追问按上一 id 直接累加，不新建行 |
+| 用户见解 | 两道门（正确+有价值）才入 insights，疑问情绪永不入；错理解只纠正不入库 |
 | 仅提问 | 只累计 times_asked，progress wrong_count+1（问即疑），技巧AND门控不通过则 technique='' |
 | 技巧入库 | AND门控：跨3异构题复用 +2-5步动词化 +IF-THEN含主标签，缺一不入；查重 `lower(trim)`/别名/tag交集 LIMIT 5 命中则合并不新建；跨科由 AI 自主决定多关联 technique_topics |
 | 做错/不会 | progress.wrong_count+1（连击清零）→ mistakes → 判定类型入 misconceptions → 双M:N关联 → 同一事务重算 mastery_score/status → mistake 日志 |
