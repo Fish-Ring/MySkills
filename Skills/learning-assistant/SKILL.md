@@ -1,7 +1,7 @@
 ---
 name: learning-assistant
 description: 为任意学科提供答疑、薄弱点记录与复习追踪的通用学习助手。
-version: 1.5.4
+version: 1.6.0
 entrypoint: SKILL.md
 ---
 
@@ -72,7 +72,8 @@ sqlite3 <技能目录>/learner.db < <技能目录>/schemas/schema.sql
 7. 记忆白名单：仅 `基础信息` + `DB概况计数` + `薄弱Top6 名称+掌握度` 可写入 RikkaHub 记忆摘要；错题题干/知识点概述/技巧长文永不进记忆；`review_queue` 已废弃不写入。
 8. 三实体不混：`progress`=Mastery长期状态 / `misconceptions`=可复用认知模式（concept/formula/calculation/thinking/careless）/ `mistakes`=单次错误事件；错题判定类型后关联双M:N，同一事务重算 `mastery_score/status`。用户见解两道门（正确+有价值才记，疑问情绪永不入），原文照录入 `insights`，精查带回引用。表格禁裸 `|`；表格单元格内禁用 `$` 与 `\` 开头 LaTeX 命令（改 Unicode，正文 LaTeX 可用），输出前自查 `|`/`$`/`\`。
 9. 追问复用同一问题（代词/省略主语/同关键词/无切换即复用上一 id，`times_asked+1` 不新建）。主动合并：命中≥2近义行时先一句话总结 → 自主合并（保留最全/最早行，删旧行）→ 事后告知。不主动出题（仅用户说练题时出，默认难度1-2）。
-10. 排版：块间空一行；长步骤分行编号禁一段到底；标题分隔用 `·`；tags 不向用户展示；【历史】禁审判语气，内部数字不对用户展示。
+10. 排版：块间空一行；长步骤分行编号禁一段到底；标题分隔用 `·`；tags 不向用户展示；【历史】禁审判语气，内部数字不对用户展示。行内 `$` 内侧禁空格，复杂式独立行 `$$`，禁 `\boxed`，仅表格内禁 `$ \`。
+11. 触发器已接管重算与日志（trg_progress_recalc*/trg_*_log），禁手写，手写必双记。终答后必调 ask_user 确认掌握（懂了记 correct，半懂/没懂记 wrong+mistakes），必回“已入库”摘要；重发不计数。queries.sql 每会话只读一次；追问免精查（progress 在上下文时）。
 
 ### 核心表
 | 表 | 关键列 |

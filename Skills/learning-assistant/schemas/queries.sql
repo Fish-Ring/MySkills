@@ -1,4 +1,10 @@
--- 通用学习助手 v1.5.4 - 常用 SQL 模板（分页+统计+tag专业名词+技巧+三实体+见解+合并+追问复用）
+-- 通用学习助手 v1.6.0 - 常用 SQL 模板（分页+统计+tag专业名词+技巧+三实体+见解+合并+追问复用）
+-- 要求 SQLite ≥3.24（UPSERT）；表达式索引与触发器各版本均可用
+-- 写入标准头（禁落文件，一律 heredoc 内联）：sqlite3 <库> <<'SQL'（quoted 防 $ 反引号展开）
+-- .timeout 5000 + .bail on（一条错整体中止，防半提交）+ BEGIN/COMMIT
+-- 定界符一律单引号且禁转义（status='weak' 不写 ''weak''）；文本内容里绝不出现英文 '（中文引号“”/撇号′U+2032）
+-- 取新行 id 与 INSERT 在同一 heredoc 内（跨进程 last_insert_rowid=0）
+-- v1.6.0 起重算与日志由触发器自动维护（trg_progress_recalc*/trg_*_log），禁手写！手写必双记
 -- 要求 SQLite ≥3.24（UPSERT）；表达式索引需 ≥3.9（Debian10 默认 3.27 可用，3.24+ 部分可用）
 -- 用法：sqlite3 -json <技能目录>/learner.db "<语句>"；写入一律 heredoc 内联事务，禁落文件
 -- 约定：中文文本里的撇号一律用 ′(U+2032)，禁英文 '；SQL 内英文引号写成 ''；先查重→相似查→自动合并后写入；tag 必须是专业名词（禁止句子），1主加最多5细分，自由决定
@@ -37,10 +43,10 @@ UPDATE user_profile SET exam='考试', stage='阶段', exam_date='日期' WHERE 
 -- 错题复犯累加（命中 UNIQUE 则 mistake_count+1；与 occurrence 模板同理）
 INSERT INTO mistakes (topic_id, question, wrong_answer, correct_answer, explanation) VALUES (知识点ID,'题','错','对','析') ON CONFLICT(topic_id,question,wrong_answer,correct_answer) DO UPDATE SET mistake_count=mistake_count+1, last_mistake_at=CURRENT_TIMESTAMP;
 -- 注意：UNIQUE 含可空列，NULL 行永不冲突；此类行靠应用层查重（上段 COALESCE 模板），命中后 UPDATE mistake_count+1
--- progress 建行+计数（含连击维护；之后必接 Mastery 重算；与下段 :45/46 快捷更新互斥，二选一）
+-- progress 建行+计数（含连击维护；重算触发器自动做；与下段快捷更新互斥，二选一）
 INSERT INTO progress (topic_id, correct_count, wrong_count, consecutive_correct, last_practice_at) VALUES (知识点ID,0,1,0,CURRENT_TIMESTAMP) ON CONFLICT(topic_id) DO UPDATE SET wrong_count=wrong_count+1, consecutive_correct=0, last_practice_at=CURRENT_TIMESTAMP;
 INSERT INTO progress (topic_id, correct_count, wrong_count, consecutive_correct, last_practice_at) VALUES (知识点ID,1,0,1,CURRENT_TIMESTAMP) ON CONFLICT(topic_id) DO UPDATE SET correct_count=correct_count+1, consecutive_correct=consecutive_correct+1, last_practice_at=CURRENT_TIMESTAMP;
--- Misconception 写入（错题判型后执行；复用时 occurrence_count+1；severity 1-5）
+-- Misconception 写入（错题判定类型后执行；复用时 occurrence_count+1；severity 1-5）
 INSERT INTO misconceptions (title, type, description, confidence) VALUES ('错误名','concept','描述',0.7) ON CONFLICT(title,type) DO UPDATE SET occurrence_count=occurrence_count+1;
 INSERT OR IGNORE INTO knowledge_misconception (topic_id, misconception_id, severity) VALUES (知识点ID,错误模式ID,4);
 INSERT OR IGNORE INTO mistake_misconceptions (mistake_id, misconception_id) VALUES (错题ID,错误模式ID);
@@ -50,12 +56,9 @@ INSERT OR IGNORE INTO question_topics (question_id, topic_id, weight) VALUES (�
 -- SELECT id FROM misconceptions WHERE lower(trim(title))=lower(trim('错误名')) AND type='concept' LIMIT 1;
 -- 追问复用（文本不同无法 ON CONFLICT 命中，按上一问题 id 直接累加，不新建行）：
 -- UPDATE questions SET times_asked=times_asked+1, last_asked_at=CURRENT_TIMESTAMP WHERE id=上一问题ID;
--- Mastery 重算（同一事务内执行：答错连击清零，答对连击+1；score=100*(cc+连击加成)/(cc+wc)；status 派生）
--- 快捷更新（行已存在时用，与上段建行模板互斥；之后必接重算）
+-- 快捷更新（行已存在时用，与上段建行模板互斥；重算触发器自动做，禁手写）
 -- 答错：UPDATE progress SET wrong_count=wrong_count+1, consecutive_correct=0, last_practice_at=CURRENT_TIMESTAMP WHERE topic_id=知识点ID;
 -- 答对：UPDATE progress SET correct_count=correct_count+1, consecutive_correct=consecutive_correct+1, last_practice_at=CURRENT_TIMESTAMP WHERE topic_id=知识点ID;
--- 重算（分母 NULLIF 防零，consecutive COALESCE 防 NULL）：
--- UPDATE progress SET mastery_score=ROUND(100.0*(correct_count+MIN(COALESCE(consecutive_correct,0),5))/NULLIF(correct_count+wrong_count+MIN(COALESCE(consecutive_correct,0),5),0),1), status=CASE WHEN wrong_count>correct_count THEN 'weak' WHEN correct_count>=3 AND 1.0*correct_count/NULLIF(correct_count+wrong_count,0)>=0.8 THEN 'mastered' WHEN correct_count>0 THEN 'familiar' ELSE 'learning' END WHERE topic_id=知识点ID;
 -- 技巧写入（AND门控通过后才执行；跨科由 AI 自主决定多关联一行 technique_topics）
 INSERT OR IGNORE INTO techniques (name, primary_subject_id, description, keywords, tags) VALUES ('技巧名',科目ID,'IF触发条件 THEN 2-5步','别名','主标签,细分1');
 UPDATE techniques SET keywords=CASE WHEN (','||COALESCE(keywords,'')||',') NOT LIKE '%,新别名,%' THEN COALESCE(keywords,'')||',新别名' ELSE keywords END, tags=CASE WHEN (','||COALESCE(tags,'')||',') NOT LIKE '%,主标签,%' THEN COALESCE(tags,'')||',主标签' ELSE tags END WHERE id=命中ID;
@@ -105,9 +108,9 @@ SELECT question, technique, tags, times_asked FROM questions WHERE date(last_ask
 SELECT t.name topic, k.name technique FROM progress p JOIN topics t ON t.id=p.topic_id LEFT JOIN technique_topics tt ON tt.topic_id=t.id LEFT JOIN techniques k ON k.id=tt.technique_id WHERE p.wrong_count>0 ORDER BY p.wrong_count DESC LIMIT 10;
 SELECT COUNT(DISTINCT technique) c FROM questions WHERE technique!='';
 
--- ============ 日志 ============
-INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'qa',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
-INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'mistake',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
+-- ============ 日志（qa/mistake 触发器自动记禁手写；exercise/review 无触发器，仍手写） ============
+INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'exercise',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
+INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'review',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
 
 -- ============ 用户见解（两道门：正确+有价值才记；疑问句情绪话永不入；原文照录禁改写） ============
 SELECT id FROM insights WHERE topic_id=知识点ID AND content='用户原话' LIMIT 1;
@@ -115,7 +118,7 @@ INSERT INTO insights (topic_id, content) VALUES (知识点ID,'用户原话理解
 SELECT content FROM insights WHERE topic_id=知识点ID ORDER BY id DESC LIMIT 2;
 
 -- ============ 主动合并（先总结释义写保留行，再转关联，最后删旧行；同一事务） ============
--- 知识点合并（progress 两行并一行：计数相加，连击取保留行，之后必接 Mastery 重算；M:N 用 UPDATE OR IGNORE 跳过重复关联）
+-- 知识点合并（progress 两行并一行：计数相加，连击取保留行，重算触发器自动做；M:N 用 UPDATE OR IGNORE 跳过重复关联）
 UPDATE questions SET topic_id=保留ID WHERE topic_id=旧ID;
 UPDATE mistakes SET topic_id=保留ID WHERE topic_id=旧ID;
 UPDATE progress SET correct_count=correct_count+(SELECT correct_count FROM progress WHERE topic_id=旧ID), wrong_count=wrong_count+(SELECT wrong_count FROM progress WHERE topic_id=旧ID) WHERE topic_id=保留ID;

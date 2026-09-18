@@ -40,10 +40,11 @@ technique_questions 技巧-问题 M:N。PRIMARY KEY(technique_id, question_id)
 |------|------|
 | 提问入库 | questions 按 question upsert：命中则 times_asked+1 并更新 last_asked_at；追问按上一 id 直接累加，不新建行 |
 | 用户见解 | 两道门（正确+有价值）才入 insights，疑问情绪永不入；错理解只纠正不入库 |
+| 触发器（v1.6.0） | trg_progress_recalc + trg_progress_recalc_u：progress 计数变更后自动重算 mastery_score/status；trg_questions_log(+_u)/trg_mistakes_log(+_u)：落行/复犯自动记 qa/mistake；AI 禁手写重算与日志 |
 | 仅提问 | 只累计 times_asked，progress wrong_count+1（问即疑），技巧AND门控不通过则 technique='' |
 | 技巧入库 | AND门控：跨3异构题复用 +2-5步动词化 +IF-THEN含主标签，缺一不入；查重 `lower(trim)`/别名/tag交集 LIMIT 5 命中则合并不新建；跨科由 AI 自主决定多关联 technique_topics |
-| 做错/不会 | progress.wrong_count+1（连击清零）→ mistakes → 判定类型入 misconceptions → 双M:N关联 → 同一事务重算 mastery_score/status → mistake 日志 |
-| 自评已懂 | progress.correct_count+1（连击+1）→ 重算 mastery_score/status → exercise 日志 |
+| 做错/不会 | progress.wrong_count+1（连击清零）→ mistakes → 判定类型入 misconceptions → 双M:N关联（重算与 mistake 日志触发器自动做，禁手写） |
+| 自评已懂 | progress.correct_count+1（连击+1，重算触发器自动做）→ 手写 exercise 日志 |
 | 复习/复盘 | 仅用户说“复习/总结/复盘”时触发：查 progress TopN（可按技巧聚合）+ history_logs 今日/7日 + 每日复盘模板，不写 review_queue |
 
 ## 薄弱点判定口径（v1.5.0：status/score 为准）

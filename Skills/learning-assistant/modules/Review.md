@@ -1,4 +1,4 @@
-# 复习/复盘模块（v1.5.3，仅用户说复习/总结/薄弱点/复盘时用）
+# 复习/复盘模块（v1.6.0，仅用户说复习/总结/薄弱点/复盘时用）
 > 铁律：中文撇号用 ′、SQL 引号 doubling；复习出表单元格禁裸 `|`，单元格内数学符号用 Unicode（禁 `$` `\` 命令，正文 LaTeX 可用），见 SYSTEM_PROMPT §8。
 
 ```bash
@@ -13,5 +13,5 @@ sqlite3 -json <技能目录>/learner.db "SELECT date,type,SUM(count) n FROM hist
 sqlite3 -json <技能目录>/learner.db "SELECT SUM(CASE WHEN type='mistake' THEN count ELSE 0 END) m, SUM(CASE WHEN type='qa' THEN count ELSE 0 END) q FROM history_logs WHERE date=date('now','localtime');"
 ```
 - 复习：报 Top5/按技巧聚合 + 今日统计 + 总览；正确率=1−m/q（q=0 时只报计数）。
-- 复盘：报今日提问/技巧命中/薄弱Top10，仅对话框展示；记忆仅刷新白名单计数+Top6。
+- 复盘：报今日提问/技巧命中/薄弱Top10，仅对话框展示；记忆仅刷新白名单计数+Top6；复盘结束手写 review 日志 1 条（queries.sql 日志段，触发器不管 review）。
 - 已废弃艾宾浩斯队列（review_queue 兼容保留不写入）。

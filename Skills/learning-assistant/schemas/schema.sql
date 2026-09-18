@@ -1,4 +1,5 @@
--- 通用学习助手 v1.5.3 - 数据库模式（全幂等，可重复执行）
+-- 通用学习助手 v1.6.0 - 数据库模式（全幂等，可重复执行）
+-- v1.6.0 +6 触发器：progress 重算（×2）与 qa/mistake 日志（×4 含追问/复犯）下沉 DB；exercise/review 无触发器仍手写
 -- 初始化：sqlite3 /workspace/learning-assistant/learner.db < schemas/schema.sql
 -- v1.5.0 新增三实体分立：progress=Mastery长期状态 / misconceptions=可复用认知模式 / mistakes=单次错误事件
 
@@ -218,3 +219,27 @@ CREATE INDEX IF NOT EXISTS idx_mistakes_count ON mistakes(mistake_count DESC);
 CREATE INDEX IF NOT EXISTS idx_questions_topic ON questions(topic_id);
 CREATE INDEX IF NOT EXISTS idx_questions_last ON questions(last_asked_at DESC);
 CREATE INDEX IF NOT EXISTS idx_insights_topic ON insights(topic_id, id DESC);
+
+-- v1.6.0 触发器（可重跑；回滚用 DROP TRIGGER IF EXISTS；.bail on 下触发器报错同样中止事务）
+-- progress 重算：INSERT/UPDATE 后自动算 mastery_score/status（公式与旧模板一致，NULLIF/COALESCE 防零）
+CREATE TRIGGER IF NOT EXISTS trg_progress_recalc AFTER INSERT ON progress FOR EACH ROW BEGIN
+  UPDATE progress SET mastery_score=ROUND(100.0*(NEW.correct_count+MIN(COALESCE(NEW.consecutive_correct,0),5))/NULLIF(NEW.correct_count+NEW.wrong_count+MIN(COALESCE(NEW.consecutive_correct,0),5),0),1), status=CASE WHEN NEW.wrong_count>NEW.correct_count THEN 'weak' WHEN NEW.correct_count>=3 AND 1.0*NEW.correct_count/NULLIF(NEW.correct_count+NEW.wrong_count,0)>=0.8 THEN 'mastered' WHEN NEW.correct_count>0 THEN 'familiar' ELSE 'learning' END WHERE topic_id=NEW.topic_id;
+END;
+CREATE TRIGGER IF NOT EXISTS trg_progress_recalc_u AFTER UPDATE OF correct_count, wrong_count, consecutive_correct ON progress FOR EACH ROW BEGIN
+  UPDATE progress SET mastery_score=ROUND(100.0*(NEW.correct_count+MIN(COALESCE(NEW.consecutive_correct,0),5))/NULLIF(NEW.correct_count+NEW.wrong_count+MIN(COALESCE(NEW.consecutive_correct,0),5),0),1), status=CASE WHEN NEW.wrong_count>NEW.correct_count THEN 'weak' WHEN NEW.correct_count>=3 AND 1.0*NEW.correct_count/NULLIF(NEW.correct_count+NEW.wrong_count,0)>=0.8 THEN 'mastered' WHEN NEW.correct_count>0 THEN 'familiar' ELSE 'learning' END WHERE topic_id=NEW.topic_id;
+END;
+-- 日志累计：questions/mistakes 落行即记（AI 禁手写 history_logs）
+CREATE TRIGGER IF NOT EXISTS trg_questions_log AFTER INSERT ON questions FOR EACH ROW BEGIN
+  INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'qa',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
+END;
+-- 追问/重复提问走 UPDATE times_asked，同样记 qa（与旧模板语义一致）
+CREATE TRIGGER IF NOT EXISTS trg_questions_log_u AFTER UPDATE OF times_asked ON questions FOR EACH ROW BEGIN
+  INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'qa',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
+END;
+CREATE TRIGGER IF NOT EXISTS trg_mistakes_log AFTER INSERT ON mistakes FOR EACH ROW BEGIN
+  INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'mistake',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
+END;
+-- 错题复犯走 UPDATE mistake_count，同样记 mistake（与旧模板语义一致）
+CREATE TRIGGER IF NOT EXISTS trg_mistakes_log_u AFTER UPDATE OF mistake_count ON mistakes FOR EACH ROW BEGIN
+  INSERT INTO history_logs (date,type,count) VALUES (date('now','localtime'),'mistake',1) ON CONFLICT(date,type) DO UPDATE SET count=count+1;
+END;
